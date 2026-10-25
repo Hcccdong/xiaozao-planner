@@ -14,8 +14,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -133,7 +133,7 @@ fun ProjectDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.TrackChanges,
+                                imageVector = Icons.Outlined.Flag,
                                 contentDescription = null,
                                 tint = Color(0xFFB45309),
                                 modifier = Modifier.size(16.dp)

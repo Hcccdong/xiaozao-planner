@@ -5,7 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.RocketLaunch
+import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -63,7 +63,7 @@ fun UpdateDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.RocketLaunch,
+                            imageVector = Icons.Outlined.Upgrade,
                             contentDescription = null,
                             tint = Color(0xFF2563EB),
                             modifier = Modifier.size(20.dp)
