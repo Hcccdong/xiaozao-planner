@@ -1,6 +1,8 @@
 package com.projectworkflow.manager.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -11,15 +13,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.TagType
 import com.projectworkflow.manager.ui.theme.*
 
 /**
- * 现代状态小胶囊 (对应参考图中的：逾期 1 天、明天会议、后天交付)
+ * 现代状态小胶囊 (例如：逾期 1 天、明天会议、后天交付)
+ * 强制单行且不自动换行，彻底杜绝竖排挤压问题
  */
 @Composable
 fun StatusPill(
@@ -38,20 +43,23 @@ fun StatusPill(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
-            .padding(horizontal = 6.dp, vertical = 2.5.dp),
+            .padding(horizontal = 8.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             color = textColor,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip
         )
     }
 }
 
 /**
- * 现代统计指标卡片 (对应参考图中的：进行中 6、待办 8、近期节点 4)
+ * 现代统计指标卡片 (进行中 / 待办 / 近期节点)
  */
 @Composable
 fun MetricCard(
@@ -66,59 +74,72 @@ fun MetricCard(
             .clip(RoundedCornerShape(16.dp))
             .background(CardBackground)
             .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
         Text(
             text = title,
             color = TextSecondaryDark,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
             text = value,
             color = TextPrimaryDark,
-            fontSize = 20.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 2.dp)
         )
         Text(
             text = subText,
             color = subTextColor,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 4.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 /**
- * 平滑动画现代进度条
+ * 平滑动画现代胶囊微渐变进度条 (更美观高质感)
  */
 @Composable
 fun ModernProgressBar(
     progress: Int, // 0 - 100
     modifier: Modifier = Modifier,
     color: Color = BluePrimary,
-    backgroundColor: Color = BorderColor
+    backgroundColor: Color = Color(0xFFF1F5F9)
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = (progress.coerceIn(0, 100) / 100f),
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
         label = "progressBarAnim"
+    )
+
+    val gradient = Brush.horizontalGradient(
+        colors = listOf(
+            color,
+            color.copy(alpha = 0.85f)
+        )
     )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(6.dp)
+            .height(8.dp)
             .clip(RoundedCornerShape(100.dp))
             .background(backgroundColor)
+            .border(0.5.dp, BorderColor.copy(alpha = 0.6f), RoundedCornerShape(100.dp))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(animatedProgress)
-                .clip(RoundedCornerShape(100.dp))
-                .background(color)
-        )
+        if (animatedProgress > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(animatedProgress)
+                    .clip(RoundedCornerShape(100.dp))
+                    .background(gradient)
+            )
+        }
     }
 }

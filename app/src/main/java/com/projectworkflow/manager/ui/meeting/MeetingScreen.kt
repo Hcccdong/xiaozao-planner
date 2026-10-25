@@ -152,7 +152,10 @@ private fun MeetingScheduleCard(
                     text = meeting.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark
+                    color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 

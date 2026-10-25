@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.Project
@@ -44,30 +45,30 @@ fun DashboardScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. 顶部 Header (日期 + 标题 + "+ 新项目" 按钮)
+        // 1. 顶部 Header (日期 + 规范标题 + "+ 新项目" 按钮)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = uiState.dateText.ifBlank { "星期五 · 10月16日" },
+                        text = uiState.dateText.ifBlank { "工程节点日程" },
                         color = TextSecondaryDark,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "今天要做什么？",
+                        text = "工程项目平台",
                         color = TextPrimaryDark,
-                        fontSize = 26.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = (-0.5).sp,
+                        letterSpacing = (-0.3).sp,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
-                        text = "让项目进度替你记住，不靠脑子硬记。",
+                        text = "项目进度全景 · 关键节点日程推进",
                         color = TextSecondaryDark,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 2.dp)
@@ -80,7 +81,7 @@ fun DashboardScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(start = 8.dp)
                 ) {
                     Text(
                         text = "+ 新项目",
@@ -111,7 +112,7 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (isSelected) BlueLight else Color.Transparent)
                             .clickable { viewModel.onSelectTab(tab) }
-                            .padding(vertical = 7.dp),
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -247,18 +248,45 @@ fun DashboardScreen(
             }
         }
 
-        // 渲染项目卡片
-        items(uiState.activeProjects) { project ->
-            ProjectProgressCard(
-                project = project,
-                onClick = { onNavigateToProjectDetail(project.id) }
-            )
+        // 渲染项目卡片或纯净空状态
+        if (uiState.activeProjects.isEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardBackground)
+                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "暂无进行中的工程项目",
+                        color = TextPrimaryDark,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "点击上方「+ 新项目」开始创建您的第一个工程",
+                        color = TextSecondaryDark,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            items(uiState.activeProjects) { project ->
+                ProjectProgressCard(
+                    project = project,
+                    onClick = { onNavigateToProjectDetail(project.id) }
+                )
+            }
         }
     }
 }
 
 /**
- * 今天重点单条卡片
+ * 今天重点单条卡片 (严格限制标题单行并赋予比重，绝不压缩右侧状态胶囊)
  */
 @Composable
 private fun TodayFocusRow(item: TodayFocusItem) {
@@ -279,7 +307,12 @@ private fun TodayFocusRow(item: TodayFocusItem) {
                 text = item.title,
                 color = TextPrimaryDark,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             StatusPill(
                 text = item.tag,
@@ -289,7 +322,7 @@ private fun TodayFocusRow(item: TodayFocusItem) {
         Text(
             text = item.detail,
             color = TextSecondaryDark,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
@@ -324,7 +357,12 @@ private fun ProjectProgressCard(
                 text = project.name,
                 color = TextPrimaryDark,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = "${project.progress}%",
@@ -338,12 +376,14 @@ private fun ProjectProgressCard(
             Text(
                 text = "当前阶段: ${currentStage.name}",
                 color = TextSecondaryDark,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 4.dp)
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         ModernProgressBar(progress = project.progress)
     }
 }

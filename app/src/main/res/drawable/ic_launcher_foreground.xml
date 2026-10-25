@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.65"
+        android:scaleY="0.65"
+        android:translateX="18.9"
+        android:translateY="18.9">
+        
+        <!-- 底座与工程地基线 -->
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M24,80 h60 v3 h-60 z" />
+            
+        <!-- 左侧建筑体 -->
+        <path
+            android:fillColor="#94A3B8"
+            android:pathData="M28,48 h16 v32 h-16 z" />
+        <path
+            android:fillColor="#0F172A"
+            android:pathData="M32,53 h8 v3 h-8 z M32,60 h8 v3 h-8 z M32,67 h8 v3 h-8 z" />
+
+        <!-- 中央主塔楼 (高耸现代建筑) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M46,26 h16 v54 h-16 z" />
+        <!-- 塔尖天线 -->
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M52.5,18 h3 v8 h-3 z" />
+        <!-- 主塔窗格排线 -->
+        <path
+            android:fillColor="#1E3A8A"
+            android:pathData="M50,32 h8 v3 h-8 z M50,39 h8 v3 h-8 z M50,46 h8 v3 h-8 z M50,53 h8 v3 h-8 z M50,60 h8 v3 h-8 z M50,67 h8 v3 h-8 z" />
+
+        <!-- 右侧副塔楼 -->
+        <path
+            android:fillColor="#E2E8F0"
+            android:pathData="M64,38 h16 v42 h-16 z" />
+        <path
+            android:fillColor="#0F172A"
+            android:pathData="M68,44 h8 v3 h-8 z M68,51 h8 v3 h-8 z M68,58 h8 v3 h-8 z M68,65 h8 v3 h-8 z" />
+
+        <!-- 右上方精准节点/造价计算微光星 (Cyan) -->
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M80,24 L82,18 L84,24 L90,26 L84,28 L82,34 L80,28 L74,26 Z" />
+    </group>
+</vector>

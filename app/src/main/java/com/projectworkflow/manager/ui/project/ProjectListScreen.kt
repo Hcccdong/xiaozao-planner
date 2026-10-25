@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.Project
@@ -61,20 +62,46 @@ fun ProjectListScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .background(SurfaceBackground)
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(projects) { project ->
-                ProjectItemCard(
-                    project = project,
-                    onClick = { onNavigateToDetail(project.id) }
-                )
+        if (projects.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "暂无工程项目",
+                        color = TextPrimaryDark,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "点击右上角「+」开始创建您的第一个造价项目",
+                        color = TextSecondaryDark,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(SurfaceBackground)
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(projects) { project ->
+                    ProjectItemCard(
+                        project = project,
+                        onClick = { onNavigateToDetail(project.id) }
+                    )
+                }
             }
         }
     }
@@ -109,7 +136,12 @@ private fun ProjectItemCard(
                 text = project.name,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimaryDark
+                color = TextPrimaryDark,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             StatusPill(text = project.status.label, tagType = tagType)
         }
@@ -119,7 +151,9 @@ private fun ProjectItemCard(
                 text = project.description,
                 fontSize = 12.sp,
                 color = TextSecondaryDark,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = 4.dp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
 

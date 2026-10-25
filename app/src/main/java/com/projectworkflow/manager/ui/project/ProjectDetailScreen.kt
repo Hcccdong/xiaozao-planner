@@ -311,7 +311,10 @@ private fun BuildingSubTaskRow(task: BuildingSubTask) {
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Apartment,
@@ -323,7 +326,9 @@ private fun BuildingSubTaskRow(task: BuildingSubTask) {
                     text = task.name,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark
+                    color = TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
             StatusPill(
@@ -508,7 +513,10 @@ private fun MeetingSmallBadge(meeting: Meeting) {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
         ) {
             Icon(
                 imageVector = Icons.Outlined.Event,
@@ -516,12 +524,14 @@ private fun MeetingSmallBadge(meeting: Meeting) {
                 tint = AmberWarningText,
                 modifier = Modifier.size(14.dp)
             )
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = meeting.title,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark
+                    color = TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
                     text = meeting.meetingTime.format(timeFormatter),
