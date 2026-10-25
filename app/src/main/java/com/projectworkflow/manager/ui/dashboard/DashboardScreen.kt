@@ -49,7 +49,7 @@ fun DashboardScreen(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                alignment = Alignment.Top
+                verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -168,7 +168,7 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    alignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
@@ -229,7 +229,7 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                alignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "项目进度",
@@ -273,7 +273,7 @@ private fun TodayFocusRow(item: TodayFocusItem) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            alignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = item.title,
@@ -318,7 +318,7 @@ private fun ProjectProgressCard(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            alignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = project.name,

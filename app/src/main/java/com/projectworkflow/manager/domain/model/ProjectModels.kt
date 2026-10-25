@@ -120,6 +120,7 @@ data class Meeting(
 )
 
 enum class MeetingType(val label: String) {
+    REVIEW("方案评审会"),
     DRAWING_REVIEW("图纸疑问交底会"),
     SITE_SURVEY("现场踏勘收方会"),
     MONTHLY_PAYMENT("月度进度款对账会"),

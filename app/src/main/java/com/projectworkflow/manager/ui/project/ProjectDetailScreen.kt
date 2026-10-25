@@ -168,7 +168,7 @@ fun ProjectDetailScreen(
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            alignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
@@ -221,7 +221,7 @@ fun ProjectDetailScreen(
                                 .fillMaxWidth()
                                 .padding(top = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            alignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(text = "送审资料状态:", fontSize = 11.sp, color = TextSecondaryDark)
                             StatusPill(
@@ -307,7 +307,7 @@ private fun BuildingSubTaskRow(task: BuildingSubTask) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            alignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -416,7 +416,7 @@ private fun CostStageTimelineItem(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                alignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stage.name,
@@ -504,7 +504,7 @@ private fun MeetingSmallBadge(meeting: Meeting) {
             .background(SurfaceBackground)
             .padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        alignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

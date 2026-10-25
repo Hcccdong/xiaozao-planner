@@ -103,7 +103,7 @@ private fun ProjectItemCard(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            alignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = project.name,

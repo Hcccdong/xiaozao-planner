@@ -139,7 +139,7 @@ fun CreateProjectSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                alignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = planDaysText,
