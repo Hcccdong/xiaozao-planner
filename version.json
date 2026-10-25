@@ -1,8 +1,8 @@
 {
-  "versionCode": 1,
-  "versionName": "1.1.0",
-  "updateLog": "1. 全面升级工程造价三大专业流程（预算工程/结算工程/全过程造价）\n2. 支持分楼栋单体算量进度拆解与工期预估\n3. 优化造价对账会议会前15分钟精准闹钟\n4. 换用现代极简矢量微图标",
-  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.1.0/xiaozao-planner_v1.1.0.apk",
-  "apkSizeMb": "16.8 MB",
+  "versionCode": 2,
+  "versionName": "1.2.0",
+  "updateLog": "1. 界面全新纯净：清除所有预设示例假数据，带来清爽空白工作台\n2. 软键盘自适应：输入项目与天数时窗口平滑避让，不再挤压或打架\n3. 流程自由定制：支持自主编辑专业阶段名称、调整天数、删除或新增流程\n4. 进度自由拖拽：升级为高质感进度滑块，支持任意百分比推进与向左拖拽退回\n5. 视角联动打通：今日、项目、节点三视角无缝切换，点击卡片直达工程详情\n6. 品牌全面升级：正式定名「工程项目平台」，配装专属现代自适应建筑矢量图标",
+  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.2.0/xiaozao-planner_v1.2.0.apk",
+  "apkSizeMb": "16.2 MB",
   "forceUpdate": false
 }
