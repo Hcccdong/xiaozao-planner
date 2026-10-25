@@ -1,0 +1,8 @@
+{
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "updateLog": "1. 全面升级工程造价三大专业流程（预算工程/结算工程/全过程造价）\n2. 支持分楼栋单体算量进度拆解与工期预估\n3. 优化造价对账会议会前15分钟精准闹钟\n4. 换用现代极简矢量微图标",
+  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.1.0/xiaozao-planner_v1.1.0.apk",
+  "apkSizeMb": "16.8 MB",
+  "forceUpdate": false
+}
