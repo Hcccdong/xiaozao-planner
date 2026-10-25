@@ -33,13 +33,14 @@ class DashboardViewModel(
         val stageNodes = projects.flatMap { p ->
             p.stages.filter { it.progress < 100 }.map { s ->
                 val isCurrent = s.status.name == "IN_PROGRESS"
+                val days = java.time.temporal.ChronoUnit.DAYS.between(s.startDate, s.endDate).coerceAtLeast(1)
                 DashboardNodeItem(
                     id = "stage_${s.id}",
                     projectId = p.id,
                     projectName = p.name,
                     title = "交付节点: ${s.name}",
                     detail = s.deliverableNote?.ifBlank { null } ?: "阶段编制推进中 (${s.progress}%)",
-                    timeText = "工期约 ${s.durationDays} 天",
+                    timeText = "工期约 $days 天",
                     statusText = if (isCurrent) "进行中" else "待启动",
                     tagType = if (isCurrent) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY,
                     isMeeting = false
@@ -69,7 +70,7 @@ class DashboardViewModel(
 
             DashboardNodeItem(
                 id = "meeting_${m.id}",
-                projectId = m.projectId,
+                projectId = m.projectId ?: 0L,
                 projectName = m.projectName ?: "工程对账",
                 title = "对账会议: ${m.title}",
                 detail = m.locationOrLink?.ifBlank { null } ?: m.agenda ?: "造价核对与方案沟通",
