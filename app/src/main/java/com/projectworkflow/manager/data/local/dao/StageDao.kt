@@ -10,6 +10,9 @@ interface StageDao {
     @Query("SELECT * FROM stages WHERE projectId = :projectId ORDER BY sortOrder ASC")
     fun getStagesByProjectFlow(projectId: Long): Flow<List<StageEntity>>
 
+    @Query("SELECT * FROM stages WHERE projectId = :projectId ORDER BY sortOrder ASC")
+    suspend fun getStagesByProjectId(projectId: Long): List<StageEntity>
+
     @Query("SELECT * FROM stages WHERE id = :stageId")
     suspend fun getStageById(stageId: Long): StageEntity?
 

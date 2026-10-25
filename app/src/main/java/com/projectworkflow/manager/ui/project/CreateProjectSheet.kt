@@ -5,12 +5,18 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.AssignmentTurnedIn
 import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,10 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
 import com.projectworkflow.manager.data.template.CostEngineeringTemplates
+import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.CostProjectType
 import com.projectworkflow.manager.ui.theme.*
 
@@ -35,7 +43,8 @@ fun CreateProjectSheet(
         description: String,
         planDays: Int,
         template: CostEngineeringTemplate,
-        subTaskNames: List<String>
+        subTaskNames: List<String>,
+        customStages: List<StagePreset>
     ) -> Unit
 ) {
     var projectName by remember { mutableStateOf("") }
@@ -44,23 +53,32 @@ fun CreateProjectSheet(
     var planDaysText by remember { mutableStateOf(selectedTemplate.defaultPlanDays.toString()) }
     var subTasksInput by remember { mutableStateOf(selectedTemplate.defaultSubTasks.joinToString("，")) }
 
+    // 可动态编辑增删的专业流程阶段列表 (保留模板预设，支持用户自由编辑)
+    var editableStages by remember { mutableStateOf(selectedTemplate.stages) }
+
     fun onSelectTemplate(template: CostEngineeringTemplate) {
         selectedTemplate = template
         planDaysText = template.defaultPlanDays.toString()
         subTasksInput = template.defaultSubTasks.joinToString("，")
+        editableStages = template.stages
     }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        containerColor = CardBackground
+        containerColor = CardBackground,
+        windowInsets = WindowInsets.ime
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(bottom = 28.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
@@ -133,7 +151,8 @@ fun CreateProjectSheet(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
             )
 
             Row(
@@ -145,8 +164,10 @@ fun CreateProjectSheet(
                     value = planDaysText,
                     onValueChange = { planDaysText = it },
                     label = { Text("计划总工期 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
                 )
 
                 Box(
@@ -156,9 +177,10 @@ fun CreateProjectSheet(
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "推荐: ${selectedTemplate.defaultPlanDays}天",
+                        text = "各阶段合计: ${editableStages.sumOf { it.durationDays }}天",
                         fontSize = 11.sp,
-                        color = TextSecondaryDark
+                        color = BluePrimary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -169,57 +191,92 @@ fun CreateProjectSheet(
                 label = { Text("楼栋单体 / 分部工程拆解 (逗号隔开)") },
                 placeholder = { Text("如: 1号楼，2号楼，3号楼，地下车库") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
             )
 
+            // 专业流程阶段与排期可编辑卡片
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(SurfaceBackground)
-                    .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-                    .padding(12.dp)
+                    .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = BluePrimary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "自动生成的专业阶段与关键对账会议：",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
-                    )
-                }
-                selectedTemplate.stages.forEachIndexed { i, stage ->
-                    Text(
-                        text = "${i + 1}. ${stage.name} (${stage.durationDays}天)",
-                        fontSize = 11.sp,
-                        color = TextPrimaryDark,
-                        modifier = Modifier.padding(top = 3.dp)
-                    )
-                    if (stage.defaultMeeting != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = BluePrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Text(
-                            text = "    • 关联会议: ${stage.defaultMeeting.title}",
-                            fontSize = 10.sp,
-                            color = AmberWarningText
+                            text = "专业流程阶段 (可自由增删/改天数)：",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryDark
                         )
                     }
+
+                    // "+ 添加阶段" 按钮
+                    TextButton(
+                        onClick = {
+                            val newStageNumber = editableStages.size + 1
+                            editableStages = editableStages + StagePreset(
+                                name = "新阶段 $newStageNumber",
+                                durationDays = 5,
+                                deliverableNote = null
+                            )
+                            planDaysText = editableStages.sumOf { it.durationDays }.toString()
+                        },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("+ 添加阶段", fontSize = 11.sp, color = BluePrimary, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                editableStages.forEachIndexed { index, stage ->
+                    EditableStageItem(
+                        index = index,
+                        stage = stage,
+                        canDelete = editableStages.size > 1,
+                        onUpdateName = { newName ->
+                            editableStages = editableStages.toMutableList().also { list ->
+                                list[index] = list[index].copy(name = newName)
+                            }
+                        },
+                        onUpdateDays = { newDays ->
+                            editableStages = editableStages.toMutableList().also { list ->
+                                list[index] = list[index].copy(durationDays = newDays.toLong().coerceAtLeast(1))
+                            }
+                            planDaysText = editableStages.sumOf { it.durationDays }.toString()
+                        },
+                        onDelete = {
+                            editableStages = editableStages.toMutableList().also { list ->
+                                list.removeAt(index)
+                            }
+                            planDaysText = editableStages.sumOf { it.durationDays }.toString()
+                        }
+                    )
                 }
             }
 
             Button(
                 onClick = {
                     if (projectName.isNotBlank()) {
-                        val planDays = planDaysText.toIntOrNull() ?: selectedTemplate.defaultPlanDays
+                        val planDays = planDaysText.toIntOrNull() ?: editableStages.sumOf { it.durationDays }.toInt().coerceAtLeast(1)
                         val subTasks = subTasksInput.split("，", ",", "、").map { it.trim() }.filter { it.isNotBlank() }
-                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, subTasks)
+                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, subTasks, editableStages)
                     }
                 },
                 enabled = projectName.isNotBlank(),
@@ -234,6 +291,124 @@ fun CreateProjectSheet(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 单条可编辑的流程阶段条目
+ */
+@Composable
+private fun EditableStageItem(
+    index: Int,
+    stage: StagePreset,
+    canDelete: Boolean,
+    onUpdateName: (String) -> Unit,
+    onUpdateDays: (Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    var stageName by remember(stage.name) { mutableStateOf(stage.name) }
+    var daysText by remember(stage.durationDays) { mutableStateOf(stage.durationDays.toString()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 序号标牌
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(BlueLight),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${index + 1}",
+                    color = BluePrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // 阶段名称输入框
+            OutlinedTextField(
+                value = stageName,
+                onValueChange = {
+                    stageName = it
+                    onUpdateName(it)
+                },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                placeholder = { Text("阶段名称", fontSize = 12.sp) },
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            // 工期天数输入框
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                OutlinedTextField(
+                    value = daysText,
+                    onValueChange = {
+                        daysText = it
+                        it.toIntOrNull()?.let { d -> onUpdateDays(d) }
+                    },
+                    modifier = Modifier.width(62.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Text(text = "天", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+
+            // 删除按钮
+            if (canDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "删除阶段",
+                        tint = RedUrgentText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
+        // 若有关联对账会议，展示温馨提示
+        if (stage.defaultMeeting != null) {
+            Row(
+                modifier = Modifier.padding(start = 30.dp, top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Event,
+                    contentDescription = null,
+                    tint = AmberWarningText,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "配套会议: ${stage.defaultMeeting.title}",
+                    fontSize = 10.sp,
+                    color = AmberWarningText,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

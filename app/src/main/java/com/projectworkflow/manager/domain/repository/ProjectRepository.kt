@@ -1,6 +1,7 @@
 package com.projectworkflow.manager.domain.repository
 
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
+import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.model.Stage
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +18,8 @@ interface ProjectRepository {
         planDays: Int,
         template: CostEngineeringTemplate,
         subTasks: List<String>,
-        startDate: LocalDateTime
+        startDate: LocalDateTime,
+        customStages: List<StagePreset>? = null
     ): Long
     suspend fun updateProject(project: Project)
     suspend fun updateStageProgress(stageId: Long, progress: Int, projectId: Long)

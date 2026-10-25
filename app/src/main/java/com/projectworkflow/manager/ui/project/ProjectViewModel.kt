@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
+import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.repository.ProjectRepository
 import kotlinx.coroutines.flow.*
@@ -40,6 +41,7 @@ class ProjectViewModel(
         planDays: Int,
         template: CostEngineeringTemplate,
         subTasks: List<String>,
+        customStages: List<StagePreset>? = null,
         onSuccess: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -50,7 +52,8 @@ class ProjectViewModel(
                 planDays = planDays,
                 template = template,
                 subTasks = subTasks,
-                startDate = LocalDateTime.now()
+                startDate = LocalDateTime.now(),
+                customStages = customStages
             )
             onSuccess(projectId)
         }

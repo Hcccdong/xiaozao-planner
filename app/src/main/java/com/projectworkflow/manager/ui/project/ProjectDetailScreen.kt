@@ -461,37 +461,85 @@ private fun CostStageTimelineItem(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            // 进度可拖拽滑块与微调控制区 (支持随意向前推进或拖拽向后退回)
+            var sliderProgress by remember(stage.progress) { mutableFloatStateOf(stage.progress.toFloat()) }
+
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Text(
+                    text = "拖拽调整:",
+                    fontSize = 11.sp,
+                    color = TextSecondaryDark,
+                    fontWeight = FontWeight.Medium
+                )
+                Slider(
+                    value = sliderProgress,
+                    onValueChange = { sliderProgress = it },
+                    onValueChangeFinished = {
+                        onUpdateProgress(sliderProgress.toInt())
+                    },
+                    valueRange = 0f..100f,
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                        activeTrackColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                        inactiveTrackColor = Color(0xFFF1F5F9)
+                    )
+                )
+                Text(
+                    text = "${sliderProgress.toInt()}%",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                    modifier = Modifier.width(36.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 OutlinedButton(
-                    onClick = { onUpdateProgress((stage.progress + 25).coerceAtMost(100)) },
+                    onClick = { onUpdateProgress((stage.progress - 10).coerceAtLeast(0)) },
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Text("+25% 进度", fontSize = 10.sp)
+                    Text("-10% 退回", fontSize = 10.sp, color = AmberWarningText)
+                }
+
+                OutlinedButton(
+                    onClick = { onUpdateProgress((stage.progress + 10).coerceAtMost(100)) },
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    Text("+10% 推进", fontSize = 10.sp, color = BluePrimary)
                 }
 
                 Button(
                     onClick = { onUpdateProgress(100) },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Text("标记已达成", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
+                    Text("达成 100%", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
                     onClick = onAddMeeting,
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Text("+ 节点会议", fontSize = 10.sp, color = BluePrimary)
+                    Text("+ 会议", fontSize = 10.sp, color = TextPrimaryDark)
                 }
             }
         }

@@ -10,6 +10,7 @@ import com.projectworkflow.manager.data.local.mapper.DataMappers.toDomain
 import com.projectworkflow.manager.data.local.mapper.DataMappers.toEpochMillis
 import com.projectworkflow.manager.data.local.mapper.DataMappers.toEntity
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
+import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.BuildingSubTask
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.model.ProjectStatus
@@ -49,7 +50,8 @@ class ProjectRepositoryImpl(
         planDays: Int,
         template: CostEngineeringTemplate,
         subTasks: List<String>,
-        startDate: LocalDateTime
+        startDate: LocalDateTime,
+        customStages: List<StagePreset>?
     ): Long {
         var currentStageStart = startDate
         val targetEndDate = startDate.plusDays(planDays.toLong())
@@ -60,6 +62,8 @@ class ProjectRepositoryImpl(
             "$subName|0|$estDays|$estDays|未开始"
         }.joinToString(";;")
 
+        val stagesToUse = if (!customStages.isNullOrEmpty()) customStages else template.stages
+
         val projectEntity = ProjectEntity(
             name = name,
             projectType = template.projectType.name,
@@ -69,7 +73,7 @@ class ProjectRepositoryImpl(
             priority = priority,
             totalPlanDays = planDays,
             elapsedDays = 0,
-            currentFocusAction = "立项完成，开始进行${template.stages.firstOrNull()?.name ?: "首阶段工作"}",
+            currentFocusAction = "立项完成，开始进行${stagesToUse.firstOrNull()?.name ?: "首阶段工作"}",
             documentStatus = "COMPLETE",
             buildingTasksJson = subTasksList,
             startTimestamp = startDate.toEpochMillis(),
@@ -79,7 +83,7 @@ class ProjectRepositoryImpl(
         val projectId = projectDao.insertProject(projectEntity)
 
         // 插入各专业阶段与对应会议
-        template.stages.forEachIndexed { index, preset ->
+        stagesToUse.forEachIndexed { index, preset ->
             val stageEnd = currentStageStart.plusDays(preset.durationDays)
             val stageEntity = StageEntity(
                 projectId = projectId,
@@ -127,6 +131,14 @@ class ProjectRepositoryImpl(
             else -> StageStatus.NOT_STARTED.name
         }
         stageDao.updateStageProgress(stageId, progress.coerceIn(0, 100), stageStatus)
+
+        // 阶段进度联动：自动重新计算全项目综合平均进度
+        val allStages = stageDao.getStagesByProjectId(projectId)
+        if (allStages.isNotEmpty()) {
+            val avgProgress = allStages.map { it.progress }.average().toInt()
+            val projectStatus = if (avgProgress >= 100) ProjectStatus.COMPLETED.name else ProjectStatus.IN_PROGRESS.name
+            projectDao.updateProjectProgress(projectId, avgProgress, projectStatus)
+        }
     }
 
     override suspend fun addStageToProject(stage: Stage): Long {
