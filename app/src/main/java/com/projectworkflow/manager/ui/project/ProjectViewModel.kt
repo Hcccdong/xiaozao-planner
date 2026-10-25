@@ -65,6 +65,33 @@ class ProjectViewModel(
         }
     }
 
+    fun updateBuildingTaskProgress(projectId: Long, taskId: String, progress: Int) {
+        viewModelScope.launch {
+            projectRepository.updateBuildingTaskProgress(projectId, taskId, progress)
+        }
+    }
+
+    fun deleteBuildingTask(projectId: Long, taskId: String) {
+        viewModelScope.launch {
+            projectRepository.deleteBuildingTask(projectId, taskId)
+        }
+    }
+
+    fun addBuildingTask(projectId: Long, name: String, estDays: Int) {
+        viewModelScope.launch {
+            val newTask = com.projectworkflow.manager.domain.model.BuildingSubTask(
+                id = "task_${System.currentTimeMillis()}",
+                name = name,
+                progress = 0,
+                estimatedDays = estDays.coerceAtLeast(1),
+                remainingDays = estDays.coerceAtLeast(1),
+                statusText = "未开始",
+                isCompleted = false
+            )
+            projectRepository.addBuildingTask(projectId, newTask)
+        }
+    }
+
     fun deleteProject(projectId: Long, onDone: () -> Unit) {
         viewModelScope.launch {
             projectRepository.deleteProject(projectId)

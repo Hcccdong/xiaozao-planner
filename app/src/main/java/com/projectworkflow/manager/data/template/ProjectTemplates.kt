@@ -98,7 +98,7 @@ object CostEngineeringTemplates {
         name = "结算工程 (竣工结算审核)",
         description = "重点关注：结算资料完整性、现场踏勘核量、隐蔽记录对账、三方争议协调与定案",
         defaultPlanDays = 40,
-        defaultSubTasks = listOf("资料完整性审查", "土建工程结算初审", "安装及机电工程结算初审", "签证变更项核实", "争议项协调对账"),
+        defaultSubTasks = listOf("土建及装饰分部工程", "安装及机电分部工程", "室外附属及绿化工程"),
         stages = listOf(
             StagePreset(
                 name = "结算资料齐备性审查与立项",
@@ -162,7 +162,7 @@ object CostEngineeringTemplates {
         name = "全过程工程咨询 (全过程造价控制)",
         description = "重点关注：前期概预算审核、施工图会审、每月进度款审核月报、动态成本台账、竣工结算",
         defaultPlanDays = 180,
-        defaultSubTasks = listOf("前期控制价编制", "施工图技术交底", "月度进度款审核(每月)", "变更签证经济核定", "竣工结算审核"),
+        defaultSubTasks = listOf("主体建安工程", "园建景观单体", "市政管网及绿化工程"),
         stages = listOf(
             StagePreset(
                 name = "前期立项与招标控制价/目标成本审核",

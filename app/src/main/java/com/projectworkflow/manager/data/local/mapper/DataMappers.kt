@@ -133,7 +133,7 @@ object DataMappers {
         return project.toDomain(stages = domainStages, meetings = domainMeetings)
     }
 
-    private fun parseBuildingTasks(json: String): List<BuildingSubTask> {
+    fun parseBuildingTasks(json: String): List<BuildingSubTask> {
         if (json.isBlank()) return emptyList()
         // 简易分隔符序列化: "name|progress|estDays|remDays|status;;name2|..."
         return json.split(";;").filter { it.isNotBlank() }.mapIndexed { index, item ->
@@ -155,7 +155,7 @@ object DataMappers {
         }
     }
 
-    private fun serializeBuildingTasks(tasks: List<BuildingSubTask>): String {
+    fun serializeBuildingTasks(tasks: List<BuildingSubTask>): String {
         return tasks.joinToString(";;") { task ->
             "${task.name}|${task.progress}|${task.estimatedDays}|${task.remainingDays}|${task.statusText}"
         }

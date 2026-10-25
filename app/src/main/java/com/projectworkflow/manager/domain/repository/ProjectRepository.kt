@@ -25,4 +25,7 @@ interface ProjectRepository {
     suspend fun updateStageProgress(stageId: Long, progress: Int, projectId: Long)
     suspend fun addStageToProject(stage: Stage): Long
     suspend fun deleteProject(projectId: Long)
+    suspend fun updateBuildingTaskProgress(projectId: Long, taskId: String, progress: Int)
+    suspend fun deleteBuildingTask(projectId: Long, taskId: String)
+    suspend fun addBuildingTask(projectId: Long, task: com.projectworkflow.manager.domain.model.BuildingSubTask)
 }

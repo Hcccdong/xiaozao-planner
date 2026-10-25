@@ -45,6 +45,7 @@ fun ProjectDetailScreen(
 ) {
     val detailState by viewModel.getProjectDetail(projectId).collectAsState(initial = ProjectDetailUiState(isLoading = true))
     val project = detailState.project
+    var showAddBuildingDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -237,28 +238,66 @@ fun ProjectDetailScreen(
                 }
 
                 // 3. 【楼栋单体 / 分部工程进度细分】
+                // 3. 【楼栋单体 / 分部工程进度细分】(支持自由添加、拖拽调整进度、删除)
                 item {
-                    Text(
-                        text = "单体楼栋 / 分部分项进度拆解",
-                        color = TextPrimaryDark,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "单体楼栋 / 分部分项进度拆解",
+                            color = TextPrimaryDark,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(
+                            onClick = { showAddBuildingDialog = true },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("+ 添加单体/分部", fontSize = 11.sp, color = BluePrimary, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
 
                 if (project.buildingTasks.isEmpty()) {
                     item {
-                        Text(
-                            text = "暂无楼栋拆分，按整体项目进度统筹推进",
-                            fontSize = 12.sp,
-                            color = TextSecondaryDark,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(CardBackground)
+                                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "暂无单体或分部分项拆解",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimaryDark
+                            )
+                            Text(
+                                text = "可按下方专业阶段统筹推进，或点击右上角「+ 添加」自定义现场分部",
+                                fontSize = 11.sp,
+                                color = TextSecondaryDark
+                            )
+                        }
                     }
                 } else {
                     items(project.buildingTasks) { task ->
-                        BuildingSubTaskRow(task = task)
+                        BuildingSubTaskRow(
+                            task = task,
+                            onUpdateProgress = { newP ->
+                                viewModel.updateBuildingTaskProgress(projectId, task.id, newP)
+                            },
+                            onDelete = {
+                                viewModel.deleteBuildingTask(projectId, task.id)
+                            }
+                        )
                     }
                 }
 
@@ -288,21 +327,38 @@ fun ProjectDetailScreen(
                 }
             }
         }
+
+        // 添加单体/分部弹窗
+        if (showAddBuildingDialog) {
+            AddBuildingTaskDialog(
+                onDismiss = { showAddBuildingDialog = false },
+                onConfirm = { name, days ->
+                    viewModel.addBuildingTask(projectId, name, days)
+                    showAddBuildingDialog = false
+                }
+            )
+        }
     }
 }
 
 /**
- * 楼栋/单体拆解单条卡片 (使用精致微图标)
+ * 楼栋/单体拆解单条卡片 (支持滑块拖拽调整、退回微调、一键删除)
  */
 @Composable
-private fun BuildingSubTaskRow(task: BuildingSubTask) {
+private fun BuildingSubTaskRow(
+    task: BuildingSubTask,
+    onUpdateProgress: (Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    var sliderProgress by remember(task.progress) { mutableFloatStateOf(task.progress.toFloat()) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(CardBackground)
             .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -331,36 +387,167 @@ private fun BuildingSubTaskRow(task: BuildingSubTask) {
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
-            StatusPill(
-                text = task.statusText,
-                tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
-            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                StatusPill(
+                    text = task.statusText,
+                    tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除此项",
+                        tint = RedUrgentText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "预估工期: ${task.estimatedDays}天",
+                text = "预估工期: ${task.estimatedDays} 天",
                 fontSize = 11.sp,
                 color = TextSecondaryDark
             )
             Text(
-                text = "进度: ${task.progress}%",
+                text = "进度: ${sliderProgress.toInt()}%",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (task.progress >= 100) GreenSuccessText else BluePrimary
+                color = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
-        ModernProgressBar(
-            progress = task.progress,
-            color = if (task.progress >= 100) GreenSuccessText else BluePrimary
-        )
+        // 可自由拖拽滑块
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "拖拽调整:",
+                fontSize = 11.sp,
+                color = TextSecondaryDark
+            )
+            Slider(
+                value = sliderProgress,
+                onValueChange = { sliderProgress = it },
+                onValueChangeFinished = {
+                    onUpdateProgress(sliderProgress.toInt())
+                },
+                valueRange = 0f..100f,
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                    activeTrackColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                    inactiveTrackColor = Color(0xFFF1F5F9)
+                )
+            )
+        }
+
+        // 微调按钮：退回 / 推进 / 达成
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedButton(
+                onClick = { onUpdateProgress((task.progress - 10).coerceAtLeast(0)) },
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.height(26.dp)
+            ) {
+                Text("-10% 退回", fontSize = 10.sp, color = AmberWarningText)
+            }
+            OutlinedButton(
+                onClick = { onUpdateProgress((task.progress + 10).coerceAtMost(100)) },
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.height(26.dp)
+            ) {
+                Text("+10% 推进", fontSize = 10.sp, color = BluePrimary)
+            }
+            Button(
+                onClick = { onUpdateProgress(100) },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.height(26.dp)
+            ) {
+                Text("达成 100%", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
+            }
+        }
     }
+}
+
+/**
+ * 添加单体/分部工程弹窗
+ */
+@Composable
+private fun AddBuildingTaskDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, days: Int) -> Unit
+) {
+    var taskName by remember { mutableStateOf("") }
+    var taskDays by remember { mutableStateOf("30") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "添加单体 / 分部工程", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("分部/单体名称 (如: 绿化种植工程)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = taskDays,
+                    onValueChange = { taskDays = it },
+                    label = { Text("预估工期 (天)") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (taskName.isNotBlank()) {
+                        val d = taskDays.toIntOrNull() ?: 30
+                        onConfirm(taskName, d)
+                    }
+                },
+                enabled = taskName.isNotBlank()
+            ) {
+                Text("确认添加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 /**
