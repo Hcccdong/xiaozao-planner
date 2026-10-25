@@ -185,15 +185,64 @@ fun CreateProjectSheet(
                 }
             }
 
-            OutlinedTextField(
-                value = subTasksInput,
-                onValueChange = { subTasksInput = it },
-                label = { Text("楼栋单体 / 分部工程拆解 (逗号隔开)") },
-                placeholder = { Text("如: 1号楼，2号楼，3号楼，地下车库") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
+            // 楼栋单体 / 分部工程拆解 (自适应多行自然换行，告别单行左右拖拽)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "楼栋单体 / 分部工程拆解：",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryDark
+                    )
+                    if (subTasksInput.isNotBlank()) {
+                        Text(
+                            text = "一键清空",
+                            fontSize = 11.sp,
+                            color = RedUrgentText,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable { subTasksInput = "" }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = subTasksInput,
+                    onValueChange = { subTasksInput = it },
+                    placeholder = { Text("如: 1号楼，2号楼，3号楼，地下车库 (支持逗号自动换行)", fontSize = 12.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2,
+                    maxLines = 4
+                )
+
+                // 快捷追加小药丸
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "快捷添加:", fontSize = 10.sp, color = TextSecondaryDark)
+                    listOf("1#楼主楼", "地下车库", "绿化工程", "室外管网").forEach { quickTag ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(SurfaceBackground)
+                                .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
+                                .clickable {
+                                    val current = subTasksInput.trim()
+                                    subTasksInput = if (current.isEmpty()) quickTag else "$current， $quickTag"
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(text = "+ $quickTag", fontSize = 10.sp, color = BluePrimary, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
 
             // 专业流程阶段与排期可编辑卡片
             Column(

@@ -1,8 +1,8 @@
 {
-  "versionCode": 3,
-  "versionName": "1.3.0",
-  "updateLog": "1. 分部单体自由拖拽：单体楼栋/分部分项工程支持滑块拖拽调整进度，支持向左退回与一键达成\n2. 分部增删自主把控：项目详情页支持一键删除不适用的分部，支持点击「+ 添加分部/单体」自定义现场工程\n3. 工期天数告别死板：彻底修复机械均分天数（如186天）的计算问题，支持按真实工程设定工期\n4. 流程与分部解耦：修正全过程造价等模板中分部名称与流程阶段混淆的问题",
-  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.3.0/xiaozao-planner_v1.3.0.apk",
+  "versionCode": 4,
+  "versionName": "1.3.1",
+  "updateLog": "1. 拆解输入自适应多行：楼栋单体与分部工程输入框改为多行自适应折行，所有文字一览无余，彻底告别单行左右拖拽\n2. 快捷标签与一键清空：支持右上角一键清空与底部快捷标签（+1#楼主楼、+地下车库、+绿化工程等）一键追加\n3. 延续 v1.3.0 核心能力：单体分部自由拖拽滑块、详情页一键删除与随时自定义添加分部",
+  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.3.1/xiaozao-planner_v1.3.1.apk",
   "apkSizeMb": "16.2 MB",
   "forceUpdate": false
 }
