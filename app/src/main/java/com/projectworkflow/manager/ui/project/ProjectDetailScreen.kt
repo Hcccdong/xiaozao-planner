@@ -460,19 +460,20 @@ private fun CostStageTimelineItem(
             ) {
                 val isDelayed = stage.progress < 100 && stage.elapsedDays > stage.planDays
                 val daysSummary = if (stage.progress >= 100) {
-                    "计划 ${stage.planDays} 天 · 实际用时 ${stage.elapsedDays} 天"
+                    "计划 ${stage.planDays}天 · 实际 ${stage.elapsedDays}天"
                 } else {
                     val remain = (stage.planDays - stage.elapsedDays).coerceAtLeast(0)
                     if (isDelayed) {
-                        "计划 ${stage.planDays} 天 · 已用 ${stage.elapsedDays} 天 · 超期 ${stage.elapsedDays - stage.planDays} 天"
+                        "计划 ${stage.planDays}天 · 已用 ${stage.elapsedDays}天 · 超期 ${stage.elapsedDays - stage.planDays}天"
                     } else {
-                        "计划 ${stage.planDays} 天 · 已用 ${stage.elapsedDays} 天 · 剩 ${remain} 天"
+                        "计划 ${stage.planDays}天 · 已用 ${stage.elapsedDays}天 · 剩 ${remain}天"
                     }
                 }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Schedule,
@@ -484,15 +485,19 @@ private fun CostStageTimelineItem(
                         text = daysSummary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (isDelayed) RedUrgentText else if (stage.progress >= 100) GreenSuccessText else TextSecondaryDark
+                        color = if (isDelayed) RedUrgentText else if (stage.progress >= 100) GreenSuccessText else TextSecondaryDark,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
                 Text(
-                    text = "修改工期/用时",
+                    text = "修改工期",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = BluePrimary,
+                    maxLines = 1,
+                    softWrap = false,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
                         .background(BlueLight)
@@ -516,21 +521,24 @@ private fun CostStageTimelineItem(
                 color = if (stage.progress >= 100) GreenSuccessText else BluePrimary
             )
 
-            // ========== 单体与专业进度折叠/展开区域 ==========
+            // ========== 单体与专业进度折叠/展开区域 (杜绝横向挤压与竖排换行) ==========
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(SurfaceBackground)
-                    .clickable { isSubTasksExpanded = !isSubTasksExpanded }
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 左侧点击切换折叠/展开
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clickable { isSubTasksExpanded = !isSubTasksExpanded }
                 ) {
                     Icon(
                         imageVector = if (isSubTasksExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -539,24 +547,29 @@ private fun CostStageTimelineItem(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "各单体/专业拆解进度 (${stage.subTasks.size}项)",
+                        text = "各单体拆解 (${stage.subTasks.size}项)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
+                        color = TextPrimaryDark,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
+                // 右侧操作胶囊 (强制单行不换行，杜绝文字竖排)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // 若阶段内已有单体，允许一键清空转为阶段整体推进模式 (解决“有些项目我就不分单体了 按整体考虑”痛点)
+                    // 若阶段内已有单体，允许一键清空转为阶段整体推进模式
                     if (stage.subTasks.isNotEmpty()) {
                         Text(
-                            text = "转为整体推进",
+                            text = "转整体",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = AmberWarningText,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(AmberWarningBg)
@@ -566,11 +579,17 @@ private fun CostStageTimelineItem(
                     }
 
                     Text(
-                        text = "+ 添加单体/分部",
+                        text = "+ 添加",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = BluePrimary,
-                        modifier = Modifier.clickable { showAddDialog = true }
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(BlueLight)
+                            .clickable { showAddDialog = true }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
@@ -654,48 +673,48 @@ private fun CostStageTimelineItem(
                 }
             }
 
-            // 操作按钮区：回退、推进、达成、开会
+            // 操作按钮区：回退、推进、达成、开会 (等宽平分防挤压)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 OutlinedButton(
                     onClick = { onUpdateStageProgress((stage.progress - 10).coerceAtLeast(0)) },
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
-                    Text("-10% 退回", fontSize = 10.sp, color = AmberWarningText)
+                    Text("-10%", fontSize = 10.sp, color = AmberWarningText, maxLines = 1, softWrap = false)
                 }
 
                 OutlinedButton(
                     onClick = { onUpdateStageProgress((stage.progress + 10).coerceAtMost(100)) },
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
-                    Text("+10% 推进", fontSize = 10.sp, color = BluePrimary)
+                    Text("+10%", fontSize = 10.sp, color = BluePrimary, maxLines = 1, softWrap = false)
                 }
 
                 Button(
                     onClick = { onUpdateStageProgress(100) },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
-                    Text("达成 100%", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
+                    Text("100%达成", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                 }
 
                 OutlinedButton(
                     onClick = onAddMeeting,
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
-                    Text("+ 会议", fontSize = 10.sp, color = TextPrimaryDark)
+                    Text("+ 会议", fontSize = 10.sp, color = TextPrimaryDark, maxLines = 1, softWrap = false)
                 }
             }
 
@@ -908,7 +927,7 @@ private fun StageSubTaskItem(
             )
         }
 
-        // 微调按钮：退回 / 推进 / 达成
+        // 微调按钮：退回 / 推进 / 达成 (等宽平分防挤压)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -916,27 +935,27 @@ private fun StageSubTaskItem(
             OutlinedButton(
                 onClick = { onUpdateProgress((task.progress - 10).coerceAtLeast(0)) },
                 shape = RoundedCornerShape(6.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
-                modifier = Modifier.height(24.dp)
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 1.dp),
+                modifier = Modifier.weight(1f).height(24.dp)
             ) {
-                Text("-10% 退回", fontSize = 9.sp, color = AmberWarningText)
+                Text("-10%", fontSize = 9.sp, color = AmberWarningText, maxLines = 1, softWrap = false)
             }
             OutlinedButton(
                 onClick = { onUpdateProgress((task.progress + 10).coerceAtMost(100)) },
                 shape = RoundedCornerShape(6.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
-                modifier = Modifier.height(24.dp)
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 1.dp),
+                modifier = Modifier.weight(1f).height(24.dp)
             ) {
-                Text("+10% 推进", fontSize = 9.sp, color = BluePrimary)
+                Text("+10%", fontSize = 9.sp, color = BluePrimary, maxLines = 1, softWrap = false)
             }
             Button(
                 onClick = { onUpdateProgress(100) },
                 shape = RoundedCornerShape(6.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
-                modifier = Modifier.height(24.dp)
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 1.dp),
+                modifier = Modifier.weight(1f).height(24.dp)
             ) {
-                Text("达成 100%", fontSize = 9.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
+                Text("100%达成", fontSize = 9.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
             }
         }
     }

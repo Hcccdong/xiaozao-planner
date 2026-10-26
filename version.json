@@ -1,8 +1,8 @@
 {
-  "versionCode": 10,
-  "versionName": "1.5.4",
-  "updateLog": "1. 阶段达成自动联动会议：阶段达成100%时自动将名下配套对账会议标记为已完成；支持在阶段与详情卡片一键点击切换会议完成状态\n2. 项目对账会议专区与分级重构：项目详情页置顶新增【造价对账会议与关键节点】日程卡片，新排会议秒级直达；首页节点模块按工程分级聚合重构，彻底解决项目混杂无层次问题\n3. 单体拆解自由把控与天数修改：新建工程支持自主选择【按整体推进】或【细分单体】，阶段支持一键【转为整体推进】清空单体；已拆解单体支持点击直接修改名称与预估天数",
-  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.4/xiaozao-planner_v1.5.4.apk",
+  "versionCode": 11,
+  "versionName": "1.5.5",
+  "updateLog": "1. 彻底修复单体栏排版换行异常：修复屏幕横向空间挤压导致的「添加单体」文字单字竖排夸张换行问题，重构为轻量胶囊操作组并从底层锁定防折行\n2. 阶段与单体操作区视觉瘦身：文案精简为「转整体」、「+ 添加」、「修改工期」，按钮组采用等宽自适应排版，小屏手机阅读更清爽\n3. 工期与进度显示防挤压强化：阶段耗时与单体微调全面增加单行文本保护与弹性权重，杜绝任何错位",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.5/xiaozao-planner_v1.5.5.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }
