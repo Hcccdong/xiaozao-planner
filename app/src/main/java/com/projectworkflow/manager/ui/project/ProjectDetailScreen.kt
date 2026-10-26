@@ -871,69 +871,6 @@ private fun StageSubTaskItem(
                 }
             }
         }
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Apartment,
-                    contentDescription = null,
-                    tint = TextSecondaryDark,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = task.name,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "(${task.estimatedDays}天 ✎)",
-                    fontSize = 11.sp,
-                    color = BluePrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                StatusPill(
-                    text = task.statusText,
-                    tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
-                )
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier.size(20.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "修改单体/天数",
-                        tint = BluePrimary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(20.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "删除此项",
-                        tint = RedUrgentText,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
 
         // 拖拽滑块
         Row(
