@@ -1,8 +1,8 @@
 {
-  "versionCode": 6,
-  "versionName": "1.5.0",
-  "updateLog": "1. 数据库升级防丢锁：移除重置机制，配置平滑增量迁移脚本，杜绝后续更新清空已有工程数据\n2. 全量数据备份与还原：首页新增【备份】保险箱，支持一键将全部工程项目打包导出并分享至微信，支持一键导入还原\n3. 延续专业流程阶段内单体拆解融合、折叠展开与双向进度智能联动",
-  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.0/xiaozao-planner_v1.5.0.apk",
+  "versionCode": 7,
+  "versionName": "1.5.1",
+  "updateLog": "1. 升级检测逻辑重构：剔除 CDN 强缓存节点，优先直连 GitHub 原生服务并提供多节点实时比对\n2. 多节点防旧缓存误报：智能遍历所有镜像获取全网最新版本，彻底杜绝单节点缓存误报'已是最新版本'\n3. 高速下载与容灾兜底：内置多通道高速下载与系统浏览器安全降级\n4. 延续 v1.5.0 数据库无损增量迁移与全量数据备份/恢复保险箱",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.1/xiaozao-planner_v1.5.1.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }
