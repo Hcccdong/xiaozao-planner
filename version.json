@@ -1,8 +1,8 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4.0",
-  "updateLog": "1. 新增【检查更新】功能：主页顶部直达手动检查，升级为多镜像容灾秒级检测\n2. 阶段内单体融合折叠：删除新建项目时割裂的独立单体拆解模块，单体与专业分项完全融入各个专业流程阶段，支持一键折叠展开、进度拖拽与增删\n3. 智能进度联动：单体进度调整自动更新所属阶段综合进度，各阶段自动汇总项目总进度",
-  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.4.0/xiaozao-planner_v1.4.0.apk",
-  "apkSizeMb": "16.5 MB",
+  "versionCode": 6,
+  "versionName": "1.5.0",
+  "updateLog": "1. 数据库升级防丢锁：移除重置机制，配置平滑增量迁移脚本，杜绝后续更新清空已有工程数据\n2. 全量数据备份与还原：首页新增【备份】保险箱，支持一键将全部工程项目打包导出并分享至微信，支持一键导入还原\n3. 延续专业流程阶段内单体拆解融合、折叠展开与双向进度智能联动",
+  "apkUrl": "https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.0/xiaozao-planner_v1.5.0.apk",
+  "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }
