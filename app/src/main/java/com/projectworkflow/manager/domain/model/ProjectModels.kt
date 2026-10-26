@@ -86,6 +86,8 @@ data class Stage(
     val sortOrder: Int,
     val startDate: LocalDateTime,
     val endDate: LocalDateTime,
+    val planDays: Int = 5, // 计划工期天数
+    val elapsedDays: Int = 0, // 实际已用/耗时天数
     val progress: Int = 0, // 0 - 100
     val status: StageStatus = StageStatus.NOT_STARTED,
     val deliverableNote: String? = null,

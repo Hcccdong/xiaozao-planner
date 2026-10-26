@@ -34,6 +34,9 @@ interface StageDao {
     @Query("UPDATE stages SET progress = :progress, status = :status, subTasksJson = :subTasksJson WHERE id = :stageId")
     suspend fun updateStageProgressAndSubTasks(stageId: Long, progress: Int, status: String, subTasksJson: String)
 
+    @Query("UPDATE stages SET endTimestamp = :endTimestamp, elapsedDays = :elapsedDays WHERE id = :stageId")
+    suspend fun updateStageDays(stageId: Long, endTimestamp: Long, elapsedDays: Int)
+
     @Delete
     suspend fun deleteStage(stage: StageEntity)
 

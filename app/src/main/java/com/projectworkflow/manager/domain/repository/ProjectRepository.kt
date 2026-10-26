@@ -24,6 +24,8 @@ interface ProjectRepository {
     ): Long
     suspend fun updateProject(project: Project)
     suspend fun updateStageProgress(stageId: Long, progress: Int, projectId: Long)
+    suspend fun updateStageDays(stageId: Long, projectId: Long, planDays: Int, elapsedDays: Int)
+    suspend fun updateProjectDays(projectId: Long, totalPlanDays: Int, elapsedDays: Int)
     suspend fun addStageToProject(stage: Stage): Long
     suspend fun deleteProject(projectId: Long)
 

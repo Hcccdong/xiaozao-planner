@@ -21,7 +21,12 @@ object DataMappers {
 
     fun ProjectEntity.toDomain(stages: List<Stage> = emptyList(), meetings: List<Meeting> = emptyList()): Project {
         val parsedTasks = parseBuildingTasks(buildingTasksJson)
-        val remaining = (totalPlanDays - elapsedDays).coerceAtLeast(0)
+        val effectiveElapsed = if (stages.isNotEmpty() && stages.any { it.elapsedDays > 0 }) {
+            stages.sumOf { it.elapsedDays }
+        } else {
+            elapsedDays
+        }
+        val remaining = (totalPlanDays - effectiveElapsed).coerceAtLeast(0)
         return Project(
             id = id,
             name = name,
@@ -31,7 +36,7 @@ object DataMappers {
             status = runCatching { ProjectStatus.valueOf(status) }.getOrDefault(ProjectStatus.IN_PROGRESS),
             priority = runCatching { Priority.valueOf(priority) }.getOrDefault(Priority.MEDIUM),
             totalPlanDays = totalPlanDays,
-            elapsedDays = elapsedDays,
+            elapsedDays = effectiveElapsed,
             remainingDays = remaining,
             currentFocusAction = currentFocusAction,
             documentStatus = runCatching { DocumentStatus.valueOf(documentStatus) }.getOrDefault(DocumentStatus.COMPLETE),
@@ -63,20 +68,24 @@ object DataMappers {
             progress = progress
         )
 
-    fun StageEntity.toDomain(meetings: List<Meeting> = emptyList()): Stage =
-        Stage(
+    fun StageEntity.toDomain(meetings: List<Meeting> = emptyList()): Stage {
+        val calculatedPlanDays = ((endTimestamp - startTimestamp) / 86400000L).toInt().coerceAtLeast(1)
+        return Stage(
             id = id,
             projectId = projectId,
             name = name,
             sortOrder = sortOrder,
             startDate = startTimestamp.toLocalDateTime(),
             endDate = endTimestamp.toLocalDateTime(),
+            planDays = calculatedPlanDays,
+            elapsedDays = elapsedDays,
             progress = progress,
             status = runCatching { StageStatus.valueOf(status) }.getOrDefault(StageStatus.NOT_STARTED),
             deliverableNote = deliverableNote,
             meetings = meetings,
             subTasks = parseBuildingTasks(subTasksJson)
         )
+    }
 
     fun Stage.toEntity(): StageEntity =
         StageEntity(
@@ -89,7 +98,8 @@ object DataMappers {
             progress = progress,
             status = status.name,
             deliverableNote = deliverableNote,
-            subTasksJson = serializeBuildingTasks(subTasks)
+            subTasksJson = serializeBuildingTasks(subTasks),
+            elapsedDays = elapsedDays
         )
 
     fun MeetingEntity.toDomain(projectName: String? = null, stageName: String? = null): Meeting =

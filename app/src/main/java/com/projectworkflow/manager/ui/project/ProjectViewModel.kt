@@ -65,6 +65,18 @@ class ProjectViewModel(
         }
     }
 
+    fun updateStageDays(stageId: Long, projectId: Long, planDays: Int, elapsedDays: Int) {
+        viewModelScope.launch {
+            projectRepository.updateStageDays(stageId, projectId, planDays, elapsedDays)
+        }
+    }
+
+    fun updateProjectDays(projectId: Long, totalPlanDays: Int, elapsedDays: Int) {
+        viewModelScope.launch {
+            projectRepository.updateProjectDays(projectId, totalPlanDays, elapsedDays)
+        }
+    }
+
     // ========== 阶段内单体/专业拆解管理 ==========
 
     fun updateStageSubTaskProgress(stageId: Long, projectId: Long, taskId: String, progress: Int) {

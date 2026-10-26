@@ -28,5 +28,6 @@ data class StageEntity(
     val progress: Int = 0, // 0 - 100
     val status: String, // NOT_STARTED, IN_PROGRESS, DELAYED, COMPLETED
     val deliverableNote: String? = null,
-    val subTasksJson: String = "" // 融入该流程阶段的各单体或专业分项拆解数据 (持久化)
+    val subTasksJson: String = "", // 融入该流程阶段的各单体或专业分项拆解数据 (持久化)
+    val elapsedDays: Int = 0 // 该阶段实际已用/耗时天数 (支持补流程与手动精准调整)
 )

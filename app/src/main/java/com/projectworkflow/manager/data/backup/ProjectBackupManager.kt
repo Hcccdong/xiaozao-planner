@@ -78,6 +78,7 @@ object ProjectBackupManager {
                         put("status", s.status)
                         put("deliverableNote", s.deliverableNote ?: "")
                         put("subTasksJson", s.subTasksJson)
+                        put("elapsedDays", s.elapsedDays)
                     }
                     stagesArray.put(sJson)
                 }
@@ -183,7 +184,8 @@ object ProjectBackupManager {
                             progress = sJson.optInt("progress", 0),
                             status = sJson.optString("status", "NOT_STARTED"),
                             deliverableNote = sJson.optString("deliverableNote", null),
-                            subTasksJson = sJson.optString("subTasksJson", "")
+                            subTasksJson = sJson.optString("subTasksJson", ""),
+                            elapsedDays = sJson.optInt("elapsedDays", 0)
                         )
                         db.stageDao().insertStage(stageEntity)
                     }

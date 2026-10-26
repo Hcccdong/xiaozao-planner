@@ -19,7 +19,7 @@ import com.projectworkflow.manager.data.local.entity.StageEntity
         StageEntity::class,
         MeetingEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,6 +55,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v3 -> v4 平滑增量迁移策略：
+         * 在 stages 表中安全增量追加 elapsedDays 字段，支持补流程与手动精准调整阶段实际耗时
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE stages ADD COLUMN elapsedDays INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    // 若字段已存在则静默忽略
+                }
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -63,7 +77,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "project_management_clean.db"
                 )
                     // 彻底移除破坏性重置指令，通过显式增量迁移保证历史数据永久安全
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance

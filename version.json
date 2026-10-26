@@ -1,8 +1,8 @@
 {
-  "versionCode": 8,
-  "versionName": "1.5.2",
-  "updateLog": "1. 首页顶部极简收拢：将右上角冗余操作聚合为单个【设置】菜单，消除界面拥挤，保留数据备份与更新入口\n2. 阶段天数输入视口重构：彻底解决专业流程阶段天数字体微缩看不清的问题，采用居中大号粗体与舒适输入胶囊\n3. 延续 v1.5.1 升级检测无缓存多源实时比对与高速下载通道",
-  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.2/xiaozao-planner_v1.5.2.apk",
+  "versionCode": 9,
+  "versionName": "1.5.3",
+  "updateLog": "1. 阶段工期与用时精准显性化：阶段卡片直观显示计划工期与已用天数，并新增【修改工期/用时】与项目全局工期校准，彻底支持补流程项目\n2. 添加单体工期统筹对照：弹窗置顶呈现阶段总工期、已分配与剩余天数，自动建议填入剩余工期并提供实时校验，彻底杜绝天数不统一\n3. 阶段流水线视觉精简化：精简流水线标题无冗余括号，优化右侧拥挤小字为清爽阶段计数徽标\n4. 数据库升级至 v4 增量无损平滑迁移，历史项目数据永久安全",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.3/xiaozao-planner_v1.5.3.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }

@@ -49,6 +49,7 @@ fun ProjectDetailScreen(
 ) {
     val detailState by viewModel.getProjectDetail(projectId).collectAsState(initial = ProjectDetailUiState(isLoading = true))
     val project = detailState.project
+    var showEditProjectDaysDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -207,13 +208,29 @@ fun ProjectDetailScreen(
                                         color = TextSecondaryDark
                                     )
                                 }
-                                Text(
-                                    text = "已用 ${project.elapsedDays} 天 · ${if (project.remainingDays > 0) "剩 ${project.remainingDays} 天" else "已超期"}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = remainingColor,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier.padding(top = 2.dp)
-                                )
+                                ) {
+                                    Text(
+                                        text = "已用 ${project.elapsedDays} 天 · ${if (project.remainingDays > 0) "剩 ${project.remainingDays} 天" else "已超期"}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = remainingColor
+                                    )
+                                    Text(
+                                        text = "调整",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BluePrimary,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(BlueLight)
+                                            .clickable { showEditProjectDaysDialog = true }
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -240,7 +257,7 @@ fun ProjectDetailScreen(
                     }
                 }
 
-                // 3. 【专业流程阶段推进与单体/专业折叠明细】
+                // 3. 【专业流程阶段流水线】
                 item {
                     Row(
                         modifier = Modifier
@@ -250,16 +267,24 @@ fun ProjectDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "专业流程阶段流水线 (单体融入阶段)",
+                            text = "专业流程阶段流水线",
                             color = TextPrimaryDark,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "展开可调整各单体/专业进度",
-                            fontSize = 11.sp,
-                            color = TextSecondaryDark
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFF1F5F9))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "共 ${project.stages.size} 个阶段",
+                                fontSize = 11.sp,
+                                color = TextSecondaryDark,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
 
@@ -270,6 +295,9 @@ fun ProjectDetailScreen(
                         isLast = isLast,
                         onUpdateStageProgress = { newProgress ->
                             viewModel.updateStageProgress(stage.id, newProgress, projectId)
+                        },
+                        onUpdateStageDays = { planDays, elapsedDays ->
+                            viewModel.updateStageDays(stage.id, projectId, planDays, elapsedDays)
                         },
                         onUpdateSubTaskProgress = { taskId, progress ->
                             viewModel.updateStageSubTaskProgress(stage.id, projectId, taskId, progress)
@@ -286,18 +314,34 @@ fun ProjectDetailScreen(
                     )
                 }
             }
+
+            // 调整全项目总工期与已用天数弹窗 (补流程全局调整)
+            if (showEditProjectDaysDialog) {
+                EditProjectDaysDialog(
+                    projectName = project.name,
+                    currentTotalPlanDays = project.totalPlanDays,
+                    currentElapsedDays = project.elapsedDays,
+                    onDismiss = { showEditProjectDaysDialog = false },
+                    onConfirm = { totalPlanDays, elapsedDays ->
+                        viewModel.updateProjectDays(projectId, totalPlanDays, elapsedDays)
+                        showEditProjectDaysDialog = false
+                    }
+                )
+            }
+            }
         }
     }
 }
 
 /**
- * 专业流程阶段卡片 (包含折叠展开的单体/专业拆解明细、滑动微调与会议)
+ * 专业流程阶段卡片 (包含折叠展开的单体/专业拆解明细、工期与耗时显示及修改、滑动微调与会议)
  */
 @Composable
 private fun CostStageTimelineItem(
     stage: Stage,
     isLast: Boolean,
     onUpdateStageProgress: (Int) -> Unit,
+    onUpdateStageDays: (planDays: Int, elapsedDays: Int) -> Unit,
     onUpdateSubTaskProgress: (taskId: String, progress: Int) -> Unit,
     onAddSubTask: (name: String, days: Int) -> Unit,
     onDeleteSubTask: (taskId: String) -> Unit,
@@ -305,6 +349,7 @@ private fun CostStageTimelineItem(
 ) {
     var isSubTasksExpanded by remember { mutableStateOf(stage.progress < 100) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDaysDialog by remember { mutableStateOf(false) }
 
     Row(modifier = Modifier.fillMaxWidth()) {
         // 左侧时间轴圆点与连接线
@@ -371,6 +416,57 @@ private fun CostStageTimelineItem(
                     color = if (stage.progress >= 100) GreenSuccessText else BluePrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Black
+                )
+            }
+
+            // 阶段工期与实际用时展示 + 修改按钮（解决“看不到工期多少天、已用0天不符实际”痛点）
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val isDelayed = stage.progress < 100 && stage.elapsedDays > stage.planDays
+                val daysSummary = if (stage.progress >= 100) {
+                    "计划 ${stage.planDays} 天 · 实际用时 ${stage.elapsedDays} 天"
+                } else {
+                    val remain = (stage.planDays - stage.elapsedDays).coerceAtLeast(0)
+                    if (isDelayed) {
+                        "计划 ${stage.planDays} 天 · 已用 ${stage.elapsedDays} 天 · 超期 ${stage.elapsedDays - stage.planDays} 天"
+                    } else {
+                        "计划 ${stage.planDays} 天 · 已用 ${stage.elapsedDays} 天 · 剩 ${remain} 天"
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        tint = if (isDelayed) RedUrgentText else TextSecondaryDark,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = daysSummary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isDelayed) RedUrgentText else if (stage.progress >= 100) GreenSuccessText else TextSecondaryDark
+                    )
+                }
+
+                Text(
+                    text = "修改工期/用时",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(BlueLight)
+                        .clickable { showEditDaysDialog = true }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
 
@@ -559,10 +655,24 @@ private fun CostStageTimelineItem(
         }
     }
 
-    // 添加阶段内单体/专业子项弹窗
+    // 修改阶段工期与实际用时弹窗
+    if (showEditDaysDialog) {
+        EditStageDaysDialog(
+            stageName = stage.name,
+            currentPlanDays = stage.planDays,
+            currentElapsedDays = stage.elapsedDays,
+            onDismiss = { showEditDaysDialog = false },
+            onConfirm = { planDays, elapsedDays ->
+                onUpdateStageDays(planDays, elapsedDays)
+                showEditDaysDialog = false
+            }
+        )
+    }
+
+    // 添加阶段内单体/专业子项弹窗 (带工期总数与剩余对比)
     if (showAddDialog) {
         AddStageSubTaskDialog(
-            stageName = stage.name,
+            stage = stage,
             onDismiss = { showAddDialog = false },
             onConfirm = { name, days ->
                 onAddSubTask(name, days)
@@ -614,6 +724,12 @@ private fun StageSubTaskItem(
                     color = TextPrimaryDark,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "(${task.estimatedDays}天)",
+                    fontSize = 11.sp,
+                    color = TextSecondaryDark,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
@@ -710,38 +826,199 @@ private fun StageSubTaskItem(
 }
 
 /**
- * 添加阶段内单体/专业子项弹窗
+ * 添加阶段内单体/专业子项弹窗 (带工期统筹对照与智能天数校验)
  */
 @Composable
 private fun AddStageSubTaskDialog(
-    stageName: String,
+    stage: Stage,
     onDismiss: () -> Unit,
     onConfirm: (name: String, days: Int) -> Unit
 ) {
+    val stagePlanDays = stage.planDays
+    val currentAllocatedDays = stage.subTasks.sumOf { it.estimatedDays }
+    val remainingUnallocatedDays = (stagePlanDays - currentAllocatedDays).coerceAtLeast(0)
+
     var taskName by remember { mutableStateOf("") }
-    var taskDays by remember { mutableStateOf("5") }
+    // 默认自动建议填入剩余未分配天数，若已满则默认预填 1 天
+    var taskDays by remember {
+        mutableStateOf(if (remainingUnallocatedDays > 0) remainingUnallocatedDays.toString() else "1")
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
                 Text(text = "添加单体 / 专业拆解", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(text = "归属阶段: $stageName", fontSize = 11.sp, color = TextSecondaryDark)
+                Text(text = "归属阶段: ${stage.name}", fontSize = 11.sp, color = TextSecondaryDark)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // 工期统筹对照卡片 (解决“不知道阶段总数、担心前后设置天数不统一”的痛点)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF8FAFC))
+                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "阶段计划总工期",
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark
+                        )
+                        Text(
+                            text = "${stagePlanDays} 天",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BluePrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "已拆解单体合计",
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark
+                        )
+                        Text(
+                            text = "${currentAllocatedDays} 天 (${stage.subTasks.size}项)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimaryDark
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "建议剩余未分配工期",
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark
+                        )
+                        Text(
+                            text = "${remainingUnallocatedDays} 天",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (remainingUnallocatedDays > 0) GreenSuccessText else AmberWarningText
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
-                    label = { Text("单体/专业名称 (如: 1#楼或钢结构)") },
+                    label = { Text("单体/专业名称 (如: 1#楼或地下车库)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 OutlinedTextField(
                     value = taskDays,
-                    onValueChange = { taskDays = it },
+                    onValueChange = { taskDays = it.filter { c -> c.isDigit() }.take(4) },
                     label = { Text("预估耗时 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 实时天数比对与校验提示
+                val enteredDays = taskDays.toIntOrNull() ?: 0
+                val totalAfterAdd = currentAllocatedDays + enteredDays
+                val (feedbackText, feedbackColor) = when {
+                    totalAfterAdd == stagePlanDays ->
+                        Pair("✓ 拆解后合计 ${stagePlanDays} 天，与阶段计划工期完全一致", GreenSuccessText)
+                    totalAfterAdd < stagePlanDays ->
+                        Pair("ℹ 拆解后合计 ${totalAfterAdd} 天，尚有 ${stagePlanDays - totalAfterAdd} 天未分配", TextSecondaryDark)
+                    else ->
+                        Pair("⚠ 拆解后合计 ${totalAfterAdd} 天，超出阶段计划 ${totalAfterAdd - stagePlanDays} 天", AmberWarningText)
+                }
+
+                Text(
+                    text = feedbackText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = feedbackColor,
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (taskName.isNotBlank()) {
+                        val d = taskDays.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                        onConfirm(taskName, d)
+                    }
+                },
+                enabled = taskName.isNotBlank()
+            ) {
+                Text("确认添加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 修改流程阶段计划工期与实际用时弹窗 (支持补流程场景)
+ */
+@Composable
+private fun EditStageDaysDialog(
+    stageName: String,
+    currentPlanDays: Int,
+    currentElapsedDays: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (planDays: Int, elapsedDays: Int) -> Unit
+) {
+    var planDaysText by remember { mutableStateOf(currentPlanDays.toString()) }
+    var elapsedDaysText by remember { mutableStateOf(currentElapsedDays.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(text = "修改阶段工期与实际用时", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "归属阶段: $stageName（支持补录真实耗时）", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "说明：若此项目为中途补录，可直接在此填写该阶段实际已经耗费的天数，系统将自动纠正'已用0天'并同步汇总至全项目总工期。",
+                    fontSize = 11.sp,
+                    color = TextSecondaryDark,
+                    lineHeight = 16.sp
+                )
+
+                OutlinedTextField(
+                    value = planDaysText,
+                    onValueChange = { planDaysText = it.filter { c -> c.isDigit() }.take(4) },
+                    label = { Text("阶段计划工期 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = elapsedDaysText,
+                    onValueChange = { elapsedDaysText = it.filter { c -> c.isDigit() }.take(4) },
+                    label = { Text("阶段实际已耗费/已用工期 (天)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -751,14 +1028,80 @@ private fun AddStageSubTaskDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (taskName.isNotBlank()) {
-                        val d = taskDays.toIntOrNull() ?: 5
-                        onConfirm(taskName, d)
-                    }
-                },
-                enabled = taskName.isNotBlank()
+                    val p = planDaysText.toIntOrNull()?.coerceAtLeast(1) ?: currentPlanDays
+                    val e = elapsedDaysText.toIntOrNull()?.coerceAtLeast(0) ?: currentElapsedDays
+                    onConfirm(p, e)
+                }
             ) {
-                Text("确认添加")
+                Text("保存修改")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 快捷调整全项目总工期与已耗天数弹窗 (补流程全局调整)
+ */
+@Composable
+private fun EditProjectDaysDialog(
+    projectName: String,
+    currentTotalPlanDays: Int,
+    currentElapsedDays: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (totalPlanDays: Int, elapsedDays: Int) -> Unit
+) {
+    var planDaysText by remember { mutableStateOf(currentTotalPlanDays.toString()) }
+    var elapsedDaysText by remember { mutableStateOf(currentElapsedDays.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(text = "调整项目总工期与已耗天数", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "项目: $projectName", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "可在此快速调整整个工程的计划总工期及已消耗天数（方便补录工程或整体进度校准）。",
+                    fontSize = 11.sp,
+                    color = TextSecondaryDark
+                )
+
+                OutlinedTextField(
+                    value = planDaysText,
+                    onValueChange = { planDaysText = it.filter { c -> c.isDigit() }.take(5) },
+                    label = { Text("计划总工期 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = elapsedDaysText,
+                    onValueChange = { elapsedDaysText = it.filter { c -> c.isDigit() }.take(5) },
+                    label = { Text("当前已用工期 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val p = planDaysText.toIntOrNull()?.coerceAtLeast(1) ?: currentTotalPlanDays
+                    val e = elapsedDaysText.toIntOrNull()?.coerceAtLeast(0) ?: currentElapsedDays
+                    onConfirm(p, e)
+                }
+            ) {
+                Text("保存")
             }
         },
         dismissButton = {

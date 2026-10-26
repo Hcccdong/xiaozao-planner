@@ -142,6 +142,38 @@ class ProjectRepositoryImpl(
         syncProjectAverageProgress(projectId)
     }
 
+    override suspend fun updateStageDays(stageId: Long, projectId: Long, planDays: Int, elapsedDays: Int) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        val newEndTimestamp = stage.startTimestamp + planDays.toLong().coerceAtLeast(1L) * 86400000L
+        stageDao.updateStageDays(stageId, newEndTimestamp, elapsedDays.coerceAtLeast(0))
+
+        // 联动更新全项目总工期与实际已用天数（完美支撑补流程场景）
+        syncProjectDaysFromStages(projectId)
+    }
+
+    override suspend fun updateProjectDays(projectId: Long, totalPlanDays: Int, elapsedDays: Int) {
+        val projectEntity = projectDao.getProjectById(projectId) ?: return
+        val updated = projectEntity.copy(
+            totalPlanDays = totalPlanDays.coerceAtLeast(1),
+            elapsedDays = elapsedDays.coerceAtLeast(0)
+        )
+        projectDao.updateProject(updated)
+    }
+
+    private suspend fun syncProjectDaysFromStages(projectId: Long) {
+        val project = projectDao.getProjectById(projectId) ?: return
+        val stages = stageDao.getStagesByProjectId(projectId)
+        if (stages.isNotEmpty()) {
+            val totalPlan = stages.sumOf { ((it.endTimestamp - it.startTimestamp) / 86400000L).toInt().coerceAtLeast(1) }
+            val totalElapsed = stages.sumOf { it.elapsedDays }
+            val updated = project.copy(
+                totalPlanDays = if (totalPlan > 0) totalPlan else project.totalPlanDays,
+                elapsedDays = totalElapsed
+            )
+            projectDao.updateProject(updated)
+        }
+    }
+
     override suspend fun addStageToProject(stage: Stage): Long {
         return stageDao.insertStage(stage.toEntity())
     }
