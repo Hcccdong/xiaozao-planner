@@ -57,16 +57,6 @@ class ProjectRepositoryImpl(
         var currentStageStart = startDate
         val targetEndDate = startDate.plusDays(planDays.toLong())
 
-        // 构造楼栋拆分数据 (若用户输入为空则不拆解；若拆解，默认以各单体30天左右起步，绝不机械强行除以5得出186天等怪异数字)
-        val subTasksList = if (subTasks.isNotEmpty()) {
-            subTasks.map { subName ->
-                val estDays = 30
-                "$subName|0|$estDays|$estDays|未开始"
-            }.joinToString(";;")
-        } else {
-            ""
-        }
-
         val stagesToUse = if (!customStages.isNullOrEmpty()) customStages else template.stages
 
         val projectEntity = ProjectEntity(
@@ -80,16 +70,26 @@ class ProjectRepositoryImpl(
             elapsedDays = 0,
             currentFocusAction = "立项完成，开始进行${stagesToUse.firstOrNull()?.name ?: "首阶段工作"}",
             documentStatus = "COMPLETE",
-            buildingTasksJson = subTasksList,
+            buildingTasksJson = "",
             startTimestamp = startDate.toEpochMillis(),
             targetEndTimestamp = targetEndDate.toEpochMillis(),
             progress = 0
         )
         val projectId = projectDao.insertProject(projectEntity)
 
-        // 插入各专业阶段与对应会议
+        // 插入各专业阶段与对应会议，并为各阶段初始化专属单体/专业子项拆解
         stagesToUse.forEachIndexed { index, preset ->
             val stageEnd = currentStageStart.plusDays(preset.durationDays)
+
+            // 为该阶段初始化单体或专业分项
+            val stageSubTasksJson = if (preset.defaultSubTasks.isNotEmpty()) {
+                preset.defaultSubTasks.map { taskName ->
+                    "$taskName|0|5|5|未开始"
+                }.joinToString(";;")
+            } else {
+                ""
+            }
+
             val stageEntity = StageEntity(
                 projectId = projectId,
                 name = preset.name,
@@ -98,7 +98,8 @@ class ProjectRepositoryImpl(
                 endTimestamp = stageEnd.toEpochMillis(),
                 progress = 0,
                 status = if (index == 0) StageStatus.IN_PROGRESS.name else StageStatus.NOT_STARTED.name,
-                deliverableNote = preset.deliverableNote
+                deliverableNote = preset.deliverableNote,
+                subTasksJson = stageSubTasksJson
             )
             val stageId = stageDao.insertStage(stageEntity)
 
@@ -138,12 +139,7 @@ class ProjectRepositoryImpl(
         stageDao.updateStageProgress(stageId, progress.coerceIn(0, 100), stageStatus)
 
         // 阶段进度联动：自动重新计算全项目综合平均进度
-        val allStages = stageDao.getStagesByProjectId(projectId)
-        if (allStages.isNotEmpty()) {
-            val avgProgress = allStages.map { it.progress }.average().toInt()
-            val projectStatus = if (avgProgress >= 100) ProjectStatus.COMPLETED.name else ProjectStatus.IN_PROGRESS.name
-            projectDao.updateProjectProgress(projectId, avgProgress, projectStatus)
-        }
+        syncProjectAverageProgress(projectId)
     }
 
     override suspend fun addStageToProject(stage: Stage): Long {
@@ -153,6 +149,107 @@ class ProjectRepositoryImpl(
     override suspend fun deleteProject(projectId: Long) {
         projectDao.deleteProjectById(projectId)
     }
+
+    // ========== 阶段专属单体/专业子项拆解管理 ==========
+
+    override suspend fun updateStageSubTaskProgress(
+        stageId: Long,
+        projectId: Long,
+        taskId: String,
+        progress: Int
+    ) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        val currentTasks = DataMappers.parseBuildingTasks(stage.subTasksJson)
+        val p = progress.coerceIn(0, 100)
+        val updatedTasks = currentTasks.map { task ->
+            if (task.id == taskId) {
+                val status = if (p >= 100) "已完成" else if (p > 0) "编制中" else "未开始"
+                task.copy(
+                    progress = p,
+                    statusText = status,
+                    isCompleted = p >= 100
+                )
+            } else task
+        }
+
+        // 联动计算本阶段平均进度
+        val stageAvgProgress = if (updatedTasks.isNotEmpty()) {
+            updatedTasks.map { it.progress }.average().toInt()
+        } else {
+            stage.progress
+        }
+        val stageStatus = when {
+            stageAvgProgress >= 100 -> StageStatus.COMPLETED.name
+            stageAvgProgress > 0 -> StageStatus.IN_PROGRESS.name
+            else -> StageStatus.NOT_STARTED.name
+        }
+        val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
+        stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
+
+        // 联动计算项目整体进度
+        syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun addStageSubTask(
+        stageId: Long,
+        projectId: Long,
+        task: BuildingSubTask
+    ) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        val currentTasks = DataMappers.parseBuildingTasks(stage.subTasksJson)
+        val updatedTasks = currentTasks + task
+
+        val stageAvgProgress = if (updatedTasks.isNotEmpty()) {
+            updatedTasks.map { it.progress }.average().toInt()
+        } else {
+            stage.progress
+        }
+        val stageStatus = when {
+            stageAvgProgress >= 100 -> StageStatus.COMPLETED.name
+            stageAvgProgress > 0 -> StageStatus.IN_PROGRESS.name
+            else -> StageStatus.NOT_STARTED.name
+        }
+        val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
+        stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
+
+        syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun deleteStageSubTask(
+        stageId: Long,
+        projectId: Long,
+        taskId: String
+    ) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        val currentTasks = DataMappers.parseBuildingTasks(stage.subTasksJson)
+        val updatedTasks = currentTasks.filterNot { it.id == taskId }
+
+        val stageAvgProgress = if (updatedTasks.isNotEmpty()) {
+            updatedTasks.map { it.progress }.average().toInt()
+        } else {
+            stage.progress
+        }
+        val stageStatus = when {
+            stageAvgProgress >= 100 -> StageStatus.COMPLETED.name
+            stageAvgProgress > 0 -> StageStatus.IN_PROGRESS.name
+            else -> StageStatus.NOT_STARTED.name
+        }
+        val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
+        stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
+
+        syncProjectAverageProgress(projectId)
+    }
+
+    private suspend fun syncProjectAverageProgress(projectId: Long) {
+        val allStages = stageDao.getStagesByProjectId(projectId)
+        if (allStages.isNotEmpty()) {
+            val avgProgress = allStages.map { it.progress }.average().toInt()
+            val projectStatus = if (avgProgress >= 100) ProjectStatus.COMPLETED.name else ProjectStatus.IN_PROGRESS.name
+            projectDao.updateProjectProgress(projectId, avgProgress, projectStatus)
+        }
+    }
+
+    // ========== 兼容历史老接口 ==========
 
     override suspend fun updateBuildingTaskProgress(projectId: Long, taskId: String, progress: Int) {
         val entity = projectDao.getProjectById(projectId) ?: return
@@ -180,7 +277,7 @@ class ProjectRepositoryImpl(
         projectDao.updateProject(entity.copy(buildingTasksJson = updatedTasksJson))
     }
 
-    override suspend fun addBuildingTask(projectId: Long, task: com.projectworkflow.manager.domain.model.BuildingSubTask) {
+    override suspend fun addBuildingTask(projectId: Long, task: BuildingSubTask) {
         val entity = projectDao.getProjectById(projectId) ?: return
         val currentTasks = DataMappers.parseBuildingTasks(entity.buildingTasksJson)
         val updated = currentTasks + task

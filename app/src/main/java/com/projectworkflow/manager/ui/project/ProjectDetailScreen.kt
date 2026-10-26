@@ -2,16 +2,19 @@ package com.projectworkflow.manager.ui.project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.BuildingSubTask
@@ -45,7 +49,6 @@ fun ProjectDetailScreen(
 ) {
     val detailState by viewModel.getProjectDetail(projectId).collectAsState(initial = ProjectDetailUiState(isLoading = true))
     val project = detailState.project
-    var showAddBuildingDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -53,7 +56,7 @@ fun ProjectDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = project?.name ?: "工程造价项目详情",
+                            text = project?.name ?: "工程项目详情",
                             maxLines = 1,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
@@ -119,7 +122,7 @@ fun ProjectDetailScreen(
                 contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // 1. 【核心聚焦：我当前需要干什么】卡片 (现代靶心矢量)
+                // 1. 【核心聚焦：我当前需要干什么】卡片
                 item {
                     Column(
                         modifier = Modifier
@@ -147,7 +150,7 @@ fun ProjectDetailScreen(
                             )
                         }
                         Text(
-                            text = project.currentFocusAction.ifBlank { "正在按计划推进工程量算量与核对" },
+                            text = project.currentFocusAction.ifBlank { "正在按专业流程推进工程量核对与各单体编制" },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF78350F),
@@ -156,7 +159,7 @@ fun ProjectDetailScreen(
                     }
                 }
 
-                // 2. 造价工期计划与进度倒计时大卡片
+                // 2. 工期计划与整体进度倒计时大卡片
                 item {
                     Column(
                         modifier = Modifier
@@ -173,7 +176,7 @@ fun ProjectDetailScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "整体编制/审核进度",
+                                    text = "全项目综合进度",
                                     color = TextSecondaryDark,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
@@ -237,79 +240,27 @@ fun ProjectDetailScreen(
                     }
                 }
 
-                // 3. 【楼栋单体 / 分部工程进度细分】
-                // 3. 【楼栋单体 / 分部工程进度细分】(支持自由添加、拖拽调整进度、删除)
+                // 3. 【专业流程阶段推进与单体/专业折叠明细】
                 item {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "单体楼栋 / 分部分项进度拆解",
+                            text = "专业流程阶段流水线 (单体融入阶段)",
                             color = TextPrimaryDark,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        TextButton(
-                            onClick = { showAddBuildingDialog = true },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text("+ 添加单体/分部", fontSize = 11.sp, color = BluePrimary, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                if (project.buildingTasks.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(CardBackground)
-                                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "暂无单体或分部分项拆解",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimaryDark
-                            )
-                            Text(
-                                text = "可按下方专业阶段统筹推进，或点击右上角「+ 添加」自定义现场分部",
-                                fontSize = 11.sp,
-                                color = TextSecondaryDark
-                            )
-                        }
-                    }
-                } else {
-                    items(project.buildingTasks) { task ->
-                        BuildingSubTaskRow(
-                            task = task,
-                            onUpdateProgress = { newP ->
-                                viewModel.updateBuildingTaskProgress(projectId, task.id, newP)
-                            },
-                            onDelete = {
-                                viewModel.deleteBuildingTask(projectId, task.id)
-                            }
+                        Text(
+                            text = "展开可调整各单体/专业进度",
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark
                         )
                     }
-                }
-
-                // 4. 【造价专业阶段流水线与关键对账会议】
-                item {
-                    Text(
-                        text = "造价流程阶段推进与节点会议",
-                        color = TextPrimaryDark,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 4.dp, top = 6.dp)
-                    )
                 }
 
                 itemsIndexed(project.stages) { index, stage ->
@@ -317,8 +268,17 @@ fun ProjectDetailScreen(
                     CostStageTimelineItem(
                         stage = stage,
                         isLast = isLast,
-                        onUpdateProgress = { newProgress ->
+                        onUpdateStageProgress = { newProgress ->
                             viewModel.updateStageProgress(stage.id, newProgress, projectId)
+                        },
+                        onUpdateSubTaskProgress = { taskId, progress ->
+                            viewModel.updateStageSubTaskProgress(stage.id, projectId, taskId, progress)
+                        },
+                        onAddSubTask = { name, days ->
+                            viewModel.addStageSubTask(stage.id, projectId, name, days)
+                        },
+                        onDeleteSubTask = { taskId ->
+                            viewModel.deleteStageSubTask(stage.id, projectId, taskId)
                         },
                         onAddMeeting = {
                             onOpenCreateMeeting(projectId, stage.id)
@@ -327,247 +287,34 @@ fun ProjectDetailScreen(
                 }
             }
         }
-
-        // 添加单体/分部弹窗
-        if (showAddBuildingDialog) {
-            AddBuildingTaskDialog(
-                onDismiss = { showAddBuildingDialog = false },
-                onConfirm = { name, days ->
-                    viewModel.addBuildingTask(projectId, name, days)
-                    showAddBuildingDialog = false
-                }
-            )
-        }
     }
 }
 
 /**
- * 楼栋/单体拆解单条卡片 (支持滑块拖拽调整、退回微调、一键删除)
- */
-@Composable
-private fun BuildingSubTaskRow(
-    task: BuildingSubTask,
-    onUpdateProgress: (Int) -> Unit,
-    onDelete: () -> Unit
-) {
-    var sliderProgress by remember(task.progress) { mutableFloatStateOf(task.progress.toFloat()) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CardBackground)
-            .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-            .padding(14.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Apartment,
-                    contentDescription = null,
-                    tint = TextSecondaryDark,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = task.name,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                StatusPill(
-                    text = task.statusText,
-                    tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
-                )
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "删除此项",
-                        tint = RedUrgentText,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "预估工期: ${task.estimatedDays} 天",
-                fontSize = 11.sp,
-                color = TextSecondaryDark
-            )
-            Text(
-                text = "进度: ${sliderProgress.toInt()}%",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary
-            )
-        }
-
-        // 可自由拖拽滑块
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "拖拽调整:",
-                fontSize = 11.sp,
-                color = TextSecondaryDark
-            )
-            Slider(
-                value = sliderProgress,
-                onValueChange = { sliderProgress = it },
-                onValueChangeFinished = {
-                    onUpdateProgress(sliderProgress.toInt())
-                },
-                valueRange = 0f..100f,
-                modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
-                    activeTrackColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
-                    inactiveTrackColor = Color(0xFFF1F5F9)
-                )
-            )
-        }
-
-        // 微调按钮：退回 / 推进 / 达成
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            OutlinedButton(
-                onClick = { onUpdateProgress((task.progress - 10).coerceAtLeast(0)) },
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                modifier = Modifier.height(26.dp)
-            ) {
-                Text("-10% 退回", fontSize = 10.sp, color = AmberWarningText)
-            }
-            OutlinedButton(
-                onClick = { onUpdateProgress((task.progress + 10).coerceAtMost(100)) },
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                modifier = Modifier.height(26.dp)
-            ) {
-                Text("+10% 推进", fontSize = 10.sp, color = BluePrimary)
-            }
-            Button(
-                onClick = { onUpdateProgress(100) },
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                modifier = Modifier.height(26.dp)
-            ) {
-                Text("达成 100%", fontSize = 10.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-/**
- * 添加单体/分部工程弹窗
- */
-@Composable
-private fun AddBuildingTaskDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (name: String, days: Int) -> Unit
-) {
-    var taskName by remember { mutableStateOf("") }
-    var taskDays by remember { mutableStateOf("30") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = "添加单体 / 分部工程", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = taskName,
-                    onValueChange = { taskName = it },
-                    label = { Text("分部/单体名称 (如: 绿化种植工程)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = taskDays,
-                    onValueChange = { taskDays = it },
-                    label = { Text("预估工期 (天)") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (taskName.isNotBlank()) {
-                        val d = taskDays.toIntOrNull() ?: 30
-                        onConfirm(taskName, d)
-                    }
-                },
-                enabled = taskName.isNotBlank()
-            ) {
-                Text("确认添加")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}
-
-/**
- * 造价阶段时间轴与关键对账会议
+ * 专业流程阶段卡片 (包含折叠展开的单体/专业拆解明细、滑动微调与会议)
  */
 @Composable
 private fun CostStageTimelineItem(
     stage: Stage,
     isLast: Boolean,
-    onUpdateProgress: (Int) -> Unit,
+    onUpdateStageProgress: (Int) -> Unit,
+    onUpdateSubTaskProgress: (taskId: String, progress: Int) -> Unit,
+    onAddSubTask: (name: String, days: Int) -> Unit,
+    onDeleteSubTask: (taskId: String) -> Unit,
     onAddMeeting: () -> Unit
 ) {
+    var isSubTasksExpanded by remember { mutableStateOf(stage.progress < 100) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
     Row(modifier = Modifier.fillMaxWidth()) {
+        // 左侧时间轴圆点与连接线
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(32.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(18.dp)
                     .clip(CircleShape)
                     .background(
                         if (stage.progress >= 100) GreenSuccessText
@@ -581,7 +328,7 @@ private fun CostStageTimelineItem(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(10.dp)
+                        modifier = Modifier.size(11.dp)
                     )
                 }
             }
@@ -596,6 +343,7 @@ private fun CostStageTimelineItem(
             }
         }
 
+        // 右侧阶段主卡片
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -605,6 +353,7 @@ private fun CostStageTimelineItem(
                 .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
                 .padding(14.dp)
         ) {
+            // 阶段标题与进度
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -614,19 +363,20 @@ private fun CostStageTimelineItem(
                     text = stage.name,
                     color = TextPrimaryDark,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "${stage.progress}%",
                     color = if (stage.progress >= 100) GreenSuccessText else BluePrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black
                 )
             }
 
             if (!stage.deliverableNote.isNullOrBlank()) {
                 Text(
-                    text = "交付目标: ${stage.deliverableNote}",
+                    text = "交付成果: ${stage.deliverableNote}",
                     color = TextSecondaryDark,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 3.dp)
@@ -639,53 +389,121 @@ private fun CostStageTimelineItem(
                 color = if (stage.progress >= 100) GreenSuccessText else BluePrimary
             )
 
-            // 关键对账协调会议 (矢量图标)
-            if (stage.meetings.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "阶段配套对账会议:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
-                stage.meetings.forEach { meeting ->
-                    MeetingSmallBadge(meeting = meeting)
+            // ========== 单体与专业进度折叠/展开区域 ==========
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceBackground)
+                    .clickable { isSubTasksExpanded = !isSubTasksExpanded }
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isSubTasksExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = BluePrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "各单体/专业拆解进度 (${stage.subTasks.size}项)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryDark
+                    )
+                }
+
+                Text(
+                    text = "+ 添加单体/分部",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary,
+                    modifier = Modifier.clickable { showAddDialog = true }
+                )
+            }
+
+            // 展开内容
+            if (isSubTasksExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (stage.subTasks.isEmpty()) {
+                        Text(
+                            text = "该阶段暂未拆解单体或专业，可点击上方「+ 添加」划分单体/专业，或直接在下方调整阶段总进度",
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark,
+                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                        )
+                    } else {
+                        stage.subTasks.forEach { subTask ->
+                            StageSubTaskItem(
+                                task = subTask,
+                                onUpdateProgress = { newProgress ->
+                                    onUpdateSubTaskProgress(subTask.id, newProgress)
+                                },
+                                onDelete = {
+                                    onDeleteSubTask(subTask.id)
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
-            // 进度可拖拽滑块与微调控制区 (支持随意向前推进或拖拽向后退回)
-            var sliderProgress by remember(stage.progress) { mutableFloatStateOf(stage.progress.toFloat()) }
+            // ========== 阶段级滑动微调与对账会议 ==========
+            var stageSliderValue by remember(stage.progress) { mutableFloatStateOf(stage.progress.toFloat()) }
 
+            Spacer(modifier = Modifier.height(10.dp))
+            Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "拖拽调整:",
-                    fontSize = 11.sp,
-                    color = TextSecondaryDark,
-                    fontWeight = FontWeight.Medium
-                )
-                Slider(
-                    value = sliderProgress,
-                    onValueChange = { sliderProgress = it },
-                    onValueChangeFinished = {
-                        onUpdateProgress(sliderProgress.toInt())
-                    },
-                    valueRange = 0f..100f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
-                        activeTrackColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
-                        inactiveTrackColor = Color(0xFFF1F5F9)
+
+            // 若本阶段没有单体子项，显示拖拽滑块直接调整阶段总进度
+            if (stage.subTasks.isEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "阶段进度:",
+                        fontSize = 11.sp,
+                        color = TextSecondaryDark,
+                        fontWeight = FontWeight.Medium
                     )
-                )
-                Text(
-                    text = "${sliderProgress.toInt()}%",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
-                    modifier = Modifier.width(36.dp)
-                )
+                    Slider(
+                        value = stageSliderValue,
+                        onValueChange = { stageSliderValue = it },
+                        onValueChangeFinished = {
+                            onUpdateStageProgress(stageSliderValue.toInt())
+                        },
+                        valueRange = 0f..100f,
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = if (stageSliderValue >= 100f) GreenSuccessText else BluePrimary,
+                            activeTrackColor = if (stageSliderValue >= 100f) GreenSuccessText else BluePrimary,
+                            inactiveTrackColor = Color(0xFFF1F5F9)
+                        )
+                    )
+                    Text(
+                        text = "${stageSliderValue.toInt()}%",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (stageSliderValue >= 100f) GreenSuccessText else BluePrimary,
+                        modifier = Modifier.width(36.dp)
+                    )
+                }
             }
 
+            // 操作按钮区：回退、推进、达成、开会
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -693,7 +511,7 @@ private fun CostStageTimelineItem(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onUpdateProgress((stage.progress - 10).coerceAtLeast(0)) },
+                    onClick = { onUpdateStageProgress((stage.progress - 10).coerceAtLeast(0)) },
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     modifier = Modifier.height(28.dp)
@@ -702,7 +520,7 @@ private fun CostStageTimelineItem(
                 }
 
                 OutlinedButton(
-                    onClick = { onUpdateProgress((stage.progress + 10).coerceAtMost(100)) },
+                    onClick = { onUpdateStageProgress((stage.progress + 10).coerceAtMost(100)) },
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     modifier = Modifier.height(28.dp)
@@ -711,7 +529,7 @@ private fun CostStageTimelineItem(
                 }
 
                 Button(
-                    onClick = { onUpdateProgress(100) },
+                    onClick = { onUpdateStageProgress(100) },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
@@ -729,8 +547,226 @@ private fun CostStageTimelineItem(
                     Text("+ 会议", fontSize = 10.sp, color = TextPrimaryDark)
                 }
             }
+
+            // 配套会议
+            if (stage.meetings.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(text = "阶段配套对账会议:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                stage.meetings.forEach { meeting ->
+                    MeetingSmallBadge(meeting = meeting)
+                }
+            }
         }
     }
+
+    // 添加阶段内单体/专业子项弹窗
+    if (showAddDialog) {
+        AddStageSubTaskDialog(
+            stageName = stage.name,
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, days ->
+                onAddSubTask(name, days)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+/**
+ * 融入阶段内部的单体/专业拆解条目 (支持滑块拖拽、微调退回、删除)
+ */
+@Composable
+private fun StageSubTaskItem(
+    task: BuildingSubTask,
+    onUpdateProgress: (Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    var sliderProgress by remember(task.progress) { mutableFloatStateOf(task.progress.toFloat()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Apartment,
+                    contentDescription = null,
+                    tint = TextSecondaryDark,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = task.name,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                StatusPill(
+                    text = task.statusText,
+                    tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除此项",
+                        tint = RedUrgentText,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+
+        // 拖拽滑块
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "拖拽调整:",
+                fontSize = 10.sp,
+                color = TextSecondaryDark
+            )
+            Slider(
+                value = sliderProgress,
+                onValueChange = { sliderProgress = it },
+                onValueChangeFinished = {
+                    onUpdateProgress(sliderProgress.toInt())
+                },
+                valueRange = 0f..100f,
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                    activeTrackColor = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                    inactiveTrackColor = Color(0xFFE2E8F0)
+                )
+            )
+            Text(
+                text = "${sliderProgress.toInt()}%",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (sliderProgress >= 100f) GreenSuccessText else BluePrimary,
+                modifier = Modifier.width(32.dp)
+            )
+        }
+
+        // 微调按钮：退回 / 推进 / 达成
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            OutlinedButton(
+                onClick = { onUpdateProgress((task.progress - 10).coerceAtLeast(0)) },
+                shape = RoundedCornerShape(6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier.height(24.dp)
+            ) {
+                Text("-10% 退回", fontSize = 9.sp, color = AmberWarningText)
+            }
+            OutlinedButton(
+                onClick = { onUpdateProgress((task.progress + 10).coerceAtMost(100)) },
+                shape = RoundedCornerShape(6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier.height(24.dp)
+            ) {
+                Text("+10% 推进", fontSize = 9.sp, color = BluePrimary)
+            }
+            Button(
+                onClick = { onUpdateProgress(100) },
+                shape = RoundedCornerShape(6.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenSuccessBg),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier.height(24.dp)
+            ) {
+                Text("达成 100%", fontSize = 9.sp, color = GreenSuccessText, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/**
+ * 添加阶段内单体/专业子项弹窗
+ */
+@Composable
+private fun AddStageSubTaskDialog(
+    stageName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, days: Int) -> Unit
+) {
+    var taskName by remember { mutableStateOf("") }
+    var taskDays by remember { mutableStateOf("5") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(text = "添加单体 / 专业拆解", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "归属阶段: $stageName", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("单体/专业名称 (如: 1#楼或钢结构)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = taskDays,
+                    onValueChange = { taskDays = it },
+                    label = { Text("预估耗时 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (taskName.isNotBlank()) {
+                        val d = taskDays.toIntOrNull() ?: 5
+                        onConfirm(taskName, d)
+                    }
+                },
+                enabled = taskName.isNotBlank()
+            ) {
+                Text("确认添加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable

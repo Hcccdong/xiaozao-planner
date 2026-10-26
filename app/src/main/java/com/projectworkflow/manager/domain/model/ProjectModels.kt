@@ -89,7 +89,8 @@ data class Stage(
     val progress: Int = 0, // 0 - 100
     val status: StageStatus = StageStatus.NOT_STARTED,
     val deliverableNote: String? = null,
-    val meetings: List<Meeting> = emptyList()
+    val meetings: List<Meeting> = emptyList(),
+    val subTasks: List<BuildingSubTask> = emptyList() // 融入该流程阶段的各单体或专业分项拆解进度
 )
 
 enum class StageStatus(val label: String) {

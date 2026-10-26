@@ -33,19 +33,19 @@ jobs:
       - name: 复制并重命名安装包
         run: |
           mkdir -p output_apk
-          cp app/build/outputs/apk/debug/app-debug.apk output_apk/xiaozao-planner_v1.3.1.apk
+          cp app/build/outputs/apk/debug/app-debug.apk output_apk/xiaozao-planner_v1.4.0.apk
 
       - name: 将 APK 上传至 GitHub Actions 供直接下载
         uses: actions/upload-artifact@v4
         with:
-          name: xiaozao-planner_v1.3.1_安装包
-          path: output_apk/xiaozao-planner_v1.3.1.apk
+          name: xiaozao-planner_v1.4.0_安装包
+          path: output_apk/xiaozao-planner_v1.4.0.apk
 
       - name: 自动同步至 Releases 附件
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.3.1
-          files: output_apk/xiaozao-planner_v1.3.1.apk
+          tag_name: v1.4.0
+          files: output_apk/xiaozao-planner_v1.4.0.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

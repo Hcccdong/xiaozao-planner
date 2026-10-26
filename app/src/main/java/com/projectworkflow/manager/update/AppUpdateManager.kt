@@ -19,16 +19,27 @@ import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
 
+data class UpdateCheckResult(
+    val updateInfo: AppUpdateInfo? = null,
+    val isLatest: Boolean = false,
+    val currentVersion: String = "",
+    val error: String? = null
+)
+
 object AppUpdateManager {
 
+    val MIRROR_URLS = listOf(
+        "https://fastly.jsdelivr.net/gh/Hcccdong/xiaozao-planner@main/version.json",
+        "https://raw.githubusercontent.com/Hcccdong/xiaozao-planner/main/version.json",
+        "https://github.com/Hcccdong/xiaozao-planner/raw/main/version.json",
+        "https://cdn.jsdelivr.net/gh/Hcccdong/xiaozao-planner@main/version.json"
+    )
+
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(6, TimeUnit.SECONDS)
+        .readTimeout(6, TimeUnit.SECONDS)
         .build()
 
-    /**
-     * 获取当前 App 本地安装的版本号
-     */
     fun getLocalVersionCode(context: Context): Long {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -43,50 +54,75 @@ object AppUpdateManager {
         }
     }
 
+    fun getLocalVersionName(context: Context): String {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: "1.0.0"
+        } catch (e: Exception) {
+            "1.0.0"
+        }
+    }
+
     /**
-     * 异步检查是否有新版本
-     * @param checkUrl 远程托管的 version.json 直链地址 (例如 Gitee Releases / Raw 地址)
+     * 多镜像容灾检查版本更新
      */
-    suspend fun checkUpdate(context: Context, checkUrl: String): AppUpdateInfo? {
+    suspend fun checkUpdate(context: Context, urls: List<String> = MIRROR_URLS): UpdateCheckResult {
         return withContext(Dispatchers.IO) {
-            try {
-                val request = Request.Builder()
-                    .url(checkUrl)
-                    .header("Cache-Control", "no-cache")
-                    .build()
+            val localCode = getLocalVersionCode(context)
+            val localName = getLocalVersionName(context)
+            var lastError: String? = null
 
-                httpClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext null
-                    val bodyString = response.body?.string() ?: return@withContext null
-                    val json = JSONObject(bodyString)
+            for (url in urls) {
+                try {
+                    // 添加时间戳防止 CDN 强缓存
+                    val targetUrl = if (url.contains("?")) "$url&t=${System.currentTimeMillis()}" else "$url?t=${System.currentTimeMillis()}"
+                    val request = Request.Builder()
+                        .url(targetUrl)
+                        .header("Cache-Control", "no-cache")
+                        .header("User-Agent", "Mozilla/5.0 ProjectManagerApp")
+                        .build()
 
-                    val remoteVersionCode = json.optInt("versionCode", 1)
-                    val remoteVersionName = json.optString("versionName", "1.0.0")
-                    val updateLog = json.optString("updateLog", "优化造价计算与界面体验")
-                    val apkUrl = json.optString("apkUrl", "")
-                    val apkSizeMb = json.optString("apkSizeMb", "")
-                    val forceUpdate = json.optBoolean("forceUpdate", false)
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val bodyString = response.body?.string()
+                        if (!bodyString.isNullOrBlank()) {
+                            val json = JSONObject(bodyString)
+                            val remoteVersionCode = json.optInt("versionCode", 1)
+                            val remoteVersionName = json.optString("versionName", "1.0.0")
+                            val updateLog = json.optString("updateLog", "优化工程流程与单体进度管理")
+                            val apkUrl = json.optString("apkUrl", "")
+                            val apkSizeMb = json.optString("apkSizeMb", "")
+                            val forceUpdate = json.optBoolean("forceUpdate", false)
 
-                    val localCode = getLocalVersionCode(context)
-
-                    // 仅当远程版本号大于本地版本号时提示更新
-                    if (remoteVersionCode > localCode && apkUrl.isNotBlank()) {
-                        AppUpdateInfo(
-                            versionCode = remoteVersionCode,
-                            versionName = remoteVersionName,
-                            updateLog = updateLog,
-                            apkUrl = apkUrl,
-                            apkSizeMb = apkSizeMb,
-                            forceUpdate = forceUpdate
-                        )
-                    } else {
-                        null
+                            if (remoteVersionCode > localCode && apkUrl.isNotBlank()) {
+                                return@withContext UpdateCheckResult(
+                                    updateInfo = AppUpdateInfo(
+                                        versionCode = remoteVersionCode,
+                                        versionName = remoteVersionName,
+                                        updateLog = updateLog,
+                                        apkUrl = apkUrl,
+                                        apkSizeMb = apkSizeMb,
+                                        forceUpdate = forceUpdate
+                                    ),
+                                    currentVersion = localName
+                                )
+                            } else {
+                                return@withContext UpdateCheckResult(
+                                    isLatest = true,
+                                    currentVersion = localName
+                                )
+                            }
+                        }
                     }
+                } catch (e: Exception) {
+                    lastError = e.message
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
             }
+
+            UpdateCheckResult(
+                error = lastError ?: "网络连接超时，请检查网络",
+                currentVersion = localName
+            )
         }
     }
 
@@ -97,7 +133,6 @@ object AppUpdateManager {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val fileName = "ProjectWorkflow_v${updateInfo.versionName}.apk"
 
-        // 目标存储在外部公共 Download 目录
         val targetFile = File(
             context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
             fileName
@@ -107,7 +142,7 @@ object AppUpdateManager {
         }
 
         val request = DownloadManager.Request(Uri.parse(updateInfo.apkUrl)).apply {
-            setTitle("正在下载工程造价小工具 v${updateInfo.versionName}")
+            setTitle("正在下载工程项目平台 v${updateInfo.versionName}")
             setDescription("更新下载完成后将自动提示安装")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setDestinationUri(Uri.fromFile(targetFile))
@@ -117,7 +152,6 @@ object AppUpdateManager {
         val downloadId = downloadManager.enqueue(request)
         Toast.makeText(context, "开始后台下载新版本，可在通知栏查看进度", Toast.LENGTH_SHORT).show()
 
-        // 注册下载完成广播监听器
         val onDownloadComplete = object : BroadcastReceiver() {
             override fun onReceive(recvContext: Context, intent: Intent) {
                 val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
@@ -153,7 +187,6 @@ object AppUpdateManager {
             return
         }
 
-        // 检查 Android 8.0+ 安装未知应用权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!context.packageManager.canRequestPackageInstalls()) {
                 Toast.makeText(context, "请授予此应用安装权限以完成更新", Toast.LENGTH_LONG).show()

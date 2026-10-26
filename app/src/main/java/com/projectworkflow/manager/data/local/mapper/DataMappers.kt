@@ -74,7 +74,8 @@ object DataMappers {
             progress = progress,
             status = runCatching { StageStatus.valueOf(status) }.getOrDefault(StageStatus.NOT_STARTED),
             deliverableNote = deliverableNote,
-            meetings = meetings
+            meetings = meetings,
+            subTasks = parseBuildingTasks(subTasksJson)
         )
 
     fun Stage.toEntity(): StageEntity =
@@ -87,7 +88,8 @@ object DataMappers {
             endTimestamp = endDate.toEpochMillis(),
             progress = progress,
             status = status.name,
-            deliverableNote = deliverableNote
+            deliverableNote = deliverableNote,
+            subTasksJson = serializeBuildingTasks(subTasks)
         )
 
     fun MeetingEntity.toDomain(projectName: String? = null, stageName: String? = null): Meeting =

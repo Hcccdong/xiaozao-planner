@@ -65,6 +65,35 @@ class ProjectViewModel(
         }
     }
 
+    // ========== 阶段内单体/专业拆解管理 ==========
+
+    fun updateStageSubTaskProgress(stageId: Long, projectId: Long, taskId: String, progress: Int) {
+        viewModelScope.launch {
+            projectRepository.updateStageSubTaskProgress(stageId, projectId, taskId, progress)
+        }
+    }
+
+    fun addStageSubTask(stageId: Long, projectId: Long, name: String, estDays: Int = 5) {
+        viewModelScope.launch {
+            val newTask = com.projectworkflow.manager.domain.model.BuildingSubTask(
+                id = "task_${System.currentTimeMillis()}",
+                name = name,
+                progress = 0,
+                estimatedDays = estDays.coerceAtLeast(1),
+                remainingDays = estDays.coerceAtLeast(1),
+                statusText = "未开始",
+                isCompleted = false
+            )
+            projectRepository.addStageSubTask(stageId, projectId, newTask)
+        }
+    }
+
+    fun deleteStageSubTask(stageId: Long, projectId: Long, taskId: String) {
+        viewModelScope.launch {
+            projectRepository.deleteStageSubTask(stageId, projectId, taskId)
+        }
+    }
+
     fun updateBuildingTaskProgress(projectId: Long, taskId: String, progress: Int) {
         viewModelScope.launch {
             projectRepository.updateBuildingTaskProgress(projectId, taskId, progress)

@@ -7,7 +7,8 @@ data class StagePreset(
     val name: String,
     val durationDays: Long,
     val deliverableNote: String? = null,
-    val defaultMeeting: MeetingPreset? = null
+    val defaultMeeting: MeetingPreset? = null,
+    val defaultSubTasks: List<String> = emptyList() // 融入该流程阶段的各单体或专业分项拆解预设
 )
 
 data class MeetingPreset(
@@ -24,7 +25,7 @@ data class CostEngineeringTemplate(
     val name: String,
     val description: String,
     val defaultPlanDays: Int,
-    val defaultSubTasks: List<String>, // 默认拆解楼栋/单体
+    val defaultSubTasks: List<String> = emptyList(),
     val stages: List<StagePreset>
 )
 
@@ -39,7 +40,6 @@ object CostEngineeringTemplates {
         name = "预算工程 (招标控制价/施工图预算)",
         description = "重点关注：图纸深度交底、分楼栋算量计价进度、内部指标复核、预算沟通会",
         defaultPlanDays = 25,
-        defaultSubTasks = listOf("1#楼主体及装饰", "2#楼主体及装饰", "3#楼主体及装饰", "地下车库及室外管网"),
         stages = listOf(
             StagePreset(
                 name = "图纸接收与深度审核",
@@ -50,7 +50,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.DRAWING_REVIEW,
                     offsetDaysFromStageStart = 2,
                     agenda = "与设计院及业主核实图纸疑问、明确做法与暂定材料范围"
-                )
+                ),
+                defaultSubTasks = listOf("图纸深度自审", "各专业图纸疑问清单交底", "暂估价与施工界面确认")
             ),
             StagePreset(
                 name = "分栋分部工程量计算与套价",
@@ -61,13 +62,15 @@ object CostEngineeringTemplates {
                     type = MeetingType.OTHER,
                     offsetDaysFromStageStart = 8,
                     agenda = "明确各单体交叉施工界面工程量归属"
-                )
+                ),
+                defaultSubTasks = listOf("1#楼主楼算量套价", "2#楼主楼算量套价", "地下车库算量套价", "室外管网与总图", "清单组价与定额套用")
             ),
             StagePreset(
                 name = "内部一级/二级复核与造价指标分析",
                 durationDays = 3,
                 deliverableNote = "单方造价经济指标分析表、复核修改记录",
-                defaultMeeting = null
+                defaultMeeting = null,
+                defaultSubTasks = listOf("工程量交叉互查", "造价工程师二级复核", "单方指标与经济指标分析")
             ),
             StagePreset(
                 name = "预算方案沟通与对账交底",
@@ -78,13 +81,15 @@ object CostEngineeringTemplates {
                     type = MeetingType.BUDGET_ALIGN,
                     offsetDaysFromStageStart = 1,
                     agenda = "向业主汇报总投资造价构成、核对重大差额项"
-                )
+                ),
+                defaultSubTasks = listOf("与建设方初次方案核对", "重大差额项争议协调", "成果修改调整")
             ),
             StagePreset(
                 name = "正式预算成果出具与归档",
                 durationDays = 2,
                 deliverableNote = "正式招标控制价编制报告、电子光盘与纸质成果盖章",
-                defaultMeeting = null
+                defaultMeeting = null,
+                defaultSubTasks = listOf("正式成果报告出具盖章", "成果电子档/纸质档归档")
             )
         )
     )
@@ -98,7 +103,6 @@ object CostEngineeringTemplates {
         name = "结算工程 (竣工结算审核)",
         description = "重点关注：结算资料完整性、现场踏勘核量、隐蔽记录对账、三方争议协调与定案",
         defaultPlanDays = 40,
-        defaultSubTasks = listOf("土建及装饰分部工程", "安装及机电分部工程", "室外附属及绿化工程"),
         stages = listOf(
             StagePreset(
                 name = "结算资料齐备性审查与立项",
@@ -109,7 +113,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.OTHER,
                     offsetDaysFromStageStart = 3,
                     agenda = "向施工方书面列明缺项材料，限定补齐时限"
-                )
+                ),
+                defaultSubTasks = listOf("竣工图核验", "签证变更单齐备审查", "隐蔽工程记录审查")
             ),
             StagePreset(
                 name = "现场实地踏勘与隐蔽工程收方",
@@ -120,13 +125,15 @@ object CostEngineeringTemplates {
                     type = MeetingType.SITE_SURVEY,
                     offsetDaysFromStageStart = 2,
                     agenda = "三方（业主/监理/咨询/施工）共同到场测量核实实际完成情况"
-                )
+                ),
+                defaultSubTasks = listOf("现场实测实量", "品牌材料核验", "踏勘纪要三方会签")
             ),
             StagePreset(
                 name = "结算初审编制与工程量背靠背核对",
                 durationDays = 18,
                 deliverableNote = "分部分项工程量对比表、定额换算与取费审查初稿",
-                defaultMeeting = null
+                defaultMeeting = null,
+                defaultSubTasks = listOf("土建及装饰分部核对", "安装及机电分部核对", "室外附属及绿化核对")
             ),
             StagePreset(
                 name = "争议项协调与三方对账会",
@@ -137,7 +144,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.DISPUTE_RECONCILE,
                     offsetDaysFromStageStart = 3,
                     agenda = "逐条核对争议签证依据、材料调差政策口径"
-                )
+                ),
+                defaultSubTasks = listOf("争议签证逐条平衡", "材料调差口径确认", "三方核减清单确认")
             ),
             StagePreset(
                 name = "三方签署定案表与成果报告出具",
@@ -148,7 +156,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.FINAL_SETTLEMENT,
                     offsetDaysFromStageStart = 4,
                     agenda = "各方代表正式在结算定案表签字盖章确认最终审计金额"
-                )
+                ),
+                defaultSubTasks = listOf("结算定案表签署", "终审报告出具与归档")
             )
         )
     )
@@ -162,7 +171,6 @@ object CostEngineeringTemplates {
         name = "全过程工程咨询 (全过程造价控制)",
         description = "重点关注：前期概预算审核、施工图会审、每月进度款审核月报、动态成本台账、竣工结算",
         defaultPlanDays = 180,
-        defaultSubTasks = listOf("主体建安工程", "园建景观单体", "市政管网及绿化工程"),
         stages = listOf(
             StagePreset(
                 name = "前期立项与招标控制价/目标成本审核",
@@ -173,7 +181,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.DRAWING_REVIEW,
                     offsetDaysFromStageStart = 10,
                     agenda = "明确合同造价计价口径与分包界面"
-                )
+                ),
+                defaultSubTasks = listOf("投资估算/概算复核", "招标控制价编制", "工程量清单核查")
             ),
             StagePreset(
                 name = "施工图图纸会审与造价控制交底",
@@ -184,7 +193,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.DRAWING_REVIEW,
                     offsetDaysFromStageStart = 5,
                     agenda = "向施工、监理交底变更签证申报流程与进度款申报规则"
-                )
+                ),
+                defaultSubTasks = listOf("图纸经济性审查", "造价控制交底宣讲")
             ),
             StagePreset(
                 name = "过程月度进度款审核与动态成本控制",
@@ -195,7 +205,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.MONTHLY_PAYMENT,
                     offsetDaysFromStageStart = 28,
                     agenda = "按月核对当月现场实际完成形象进度与工程款支付额"
-                )
+                ),
+                defaultSubTasks = listOf("现场形象进度核查", "月度申报款计量", "进度款审核意见书")
             ),
             StagePreset(
                 name = "过程设计变更与现场经济签证核定",
@@ -206,7 +217,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.DISPUTE_RECONCILE,
                     offsetDaysFromStageStart = 15,
                     agenda = "事前算赢，评估设计变更经济合理性并核准造价"
-                )
+                ),
+                defaultSubTasks = listOf("重大设计变更经济评估", "现场签证真实性复查", "动态成本台账登记")
             ),
             StagePreset(
                 name = "竣工结算终审与造价后评估复盘",
@@ -217,7 +229,8 @@ object CostEngineeringTemplates {
                     type = MeetingType.FINAL_SETTLEMENT,
                     offsetDaysFromStageStart = 25,
                     agenda = "向业主汇报全过程节资率、成本管控得失与后续运维建议"
-                )
+                ),
+                defaultSubTasks = listOf("合同结算终审", "后评估总结与指标入库")
             )
         )
     )

@@ -35,6 +35,8 @@ import com.projectworkflow.manager.ui.update.UpdateDialog
 import com.projectworkflow.manager.update.AppUpdateInfo
 import com.projectworkflow.manager.update.AppUpdateManager
 import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -81,13 +83,29 @@ class MainActivity : ComponentActivity() {
                 val allProjects by projectViewModel.allProjects.collectAsState()
 
                 val context = LocalContext.current
+                val coroutineScope = rememberCoroutineScope()
                 var updateInfo by remember { mutableStateOf<AppUpdateInfo?>(null) }
 
-                // 启动时自动静默检查新版本
+                // 启动时多镜像自动静默检查新版本
                 LaunchedEffect(Unit) {
-                    val info = AppUpdateManager.checkUpdate(context, CHECK_UPDATE_URL)
-                    if (info != null) {
-                        updateInfo = info
+                    val result = AppUpdateManager.checkUpdate(context)
+                    if (result.updateInfo != null) {
+                        updateInfo = result.updateInfo
+                    }
+                }
+
+                // 手动点击检查更新处理函数
+                val handleManualCheckUpdate: () -> Unit = {
+                    Toast.makeText(context, "正在检查新版本...", Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        val result = AppUpdateManager.checkUpdate(context)
+                        if (result.updateInfo != null) {
+                            updateInfo = result.updateInfo
+                        } else if (result.isLatest) {
+                            Toast.makeText(context, "当前已是最新版本 (v${result.currentVersion})，无需更新", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, result.error ?: "检查更新失败，请检查网络连接", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
 
@@ -111,7 +129,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onOpenCreateProject = {
                                     showCreateProjectSheet = true
-                                }
+                                },
+                                onCheckUpdate = handleManualCheckUpdate
                             )
                         }
 

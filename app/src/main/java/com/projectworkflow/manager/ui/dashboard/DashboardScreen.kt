@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,6 +38,7 @@ fun DashboardScreen(
     onNavigateToProjectDetail: (Long) -> Unit,
     onNavigateToAllProjects: () -> Unit,
     onOpenCreateProject: () -> Unit,
+    onCheckUpdate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,20 +82,47 @@ fun DashboardScreen(
                     )
                 }
 
-                // "+ 新项目" 按钮
-                Button(
-                    onClick = onOpenCreateProject,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    modifier = Modifier.padding(start = 8.dp)
+                // 操作按钮组：检查更新 + 新项目
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(start = 6.dp)
                 ) {
-                    Text(
-                        text = "+ 新项目",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    OutlinedButton(
+                        onClick = onCheckUpdate,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Upgrade,
+                            contentDescription = "检查更新",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "更新",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BluePrimary
+                        )
+                    }
+
+                    Button(
+                        onClick = onOpenCreateProject,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "+ 新项目",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

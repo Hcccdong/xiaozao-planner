@@ -10,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.AssignmentTurnedIn
 import androidx.compose.material.icons.outlined.Autorenew
@@ -51,15 +49,13 @@ fun CreateProjectSheet(
     var projectDesc by remember { mutableStateOf("") }
     var selectedTemplate by remember { mutableStateOf(CostEngineeringTemplates.BUDGET_TEMPLATE) }
     var planDaysText by remember { mutableStateOf(selectedTemplate.defaultPlanDays.toString()) }
-    var subTasksInput by remember { mutableStateOf(selectedTemplate.defaultSubTasks.joinToString("，")) }
 
-    // 可动态编辑增删的专业流程阶段列表 (保留模板预设，支持用户自由编辑)
+    // 可动态编辑增删的专业流程阶段列表 (保留模板预设，支持用户自由编辑阶段与工期)
     var editableStages by remember { mutableStateOf(selectedTemplate.stages) }
 
     fun onSelectTemplate(template: CostEngineeringTemplate) {
         selectedTemplate = template
         planDaysText = template.defaultPlanDays.toString()
-        subTasksInput = template.defaultSubTasks.joinToString("，")
         editableStages = template.stages
     }
 
@@ -82,7 +78,7 @@ fun CreateProjectSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "新建工程造价项目",
+                text = "新建工程项目",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Black,
                 color = TextPrimaryDark
@@ -185,66 +181,7 @@ fun CreateProjectSheet(
                 }
             }
 
-            // 楼栋单体 / 分部工程拆解 (自适应多行自然换行，告别单行左右拖拽)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "楼栋单体 / 分部工程拆解：",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
-                    )
-                    if (subTasksInput.isNotBlank()) {
-                        Text(
-                            text = "一键清空",
-                            fontSize = 11.sp,
-                            color = RedUrgentText,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clickable { subTasksInput = "" }
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = subTasksInput,
-                    onValueChange = { subTasksInput = it },
-                    placeholder = { Text("如: 1号楼，2号楼，3号楼，地下车库 (支持逗号自动换行)", fontSize = 12.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    minLines = 2,
-                    maxLines = 4
-                )
-
-                // 快捷追加小药丸
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "快捷添加:", fontSize = 10.sp, color = TextSecondaryDark)
-                    listOf("1#楼主楼", "地下车库", "绿化工程", "室外管网").forEach { quickTag ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(SurfaceBackground)
-                                .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
-                                .clickable {
-                                    val current = subTasksInput.trim()
-                                    subTasksInput = if (current.isEmpty()) quickTag else "$current， $quickTag"
-                                }
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(text = "+ $quickTag", fontSize = 10.sp, color = BluePrimary, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
-
-            // 专业流程阶段与排期可编辑卡片
+            // 专业流程阶段与排期可编辑卡片 (各个单体与专业进度在创建后直接在各阶段内折叠管理)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -324,8 +261,7 @@ fun CreateProjectSheet(
                 onClick = {
                     if (projectName.isNotBlank()) {
                         val planDays = planDaysText.toIntOrNull() ?: editableStages.sumOf { it.durationDays }.toInt().coerceAtLeast(1)
-                        val subTasks = subTasksInput.split("，", ",", "、").map { it.trim() }.filter { it.isNotBlank() }
-                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, subTasks, editableStages)
+                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, emptyList(), editableStages)
                     }
                 },
                 enabled = projectName.isNotBlank(),
@@ -384,13 +320,13 @@ private fun EditableStageItem(
             ) {
                 Text(
                     text = "${index + 1}",
-                    color = BluePrimary,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary
                 )
             }
 
-            // 阶段名称输入框
+            // 阶段名称输入
             OutlinedTextField(
                 value = stageName,
                 onValueChange = {
@@ -399,30 +335,22 @@ private fun EditableStageItem(
                 },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
-                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                placeholder = { Text("阶段名称", fontSize = 12.sp) },
-                shape = RoundedCornerShape(8.dp)
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
             )
 
-            // 工期天数输入框
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                OutlinedTextField(
-                    value = daysText,
-                    onValueChange = {
-                        daysText = it
-                        it.toIntOrNull()?.let { d -> onUpdateDays(d) }
-                    },
-                    modifier = Modifier.width(62.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                Text(text = "天", fontSize = 11.sp, color = TextSecondaryDark)
-            }
+            // 阶段天数输入
+            OutlinedTextField(
+                value = daysText,
+                onValueChange = {
+                    daysText = it
+                    it.toIntOrNull()?.let { d -> onUpdateDays(d) }
+                },
+                trailingIcon = { Text("天", fontSize = 11.sp, color = TextSecondaryDark) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.width(72.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+            )
 
             // 删除按钮
             if (canDelete) {
