@@ -328,7 +328,6 @@ fun ProjectDetailScreen(
                     }
                 )
             }
-            }
         }
     }
 }
