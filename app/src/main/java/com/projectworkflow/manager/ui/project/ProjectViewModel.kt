@@ -166,6 +166,12 @@ class ProjectViewModel(
         }
     }
 
+    fun updateBusinessClosure(projectId: Long, status: com.projectworkflow.manager.domain.model.BusinessClosureStatus) {
+        viewModelScope.launch {
+            projectRepository.updateProjectBusinessClosure(projectId, status)
+        }
+    }
+
     class Factory(
         private val projectRepository: ProjectRepository
     ) : ViewModelProvider.Factory {

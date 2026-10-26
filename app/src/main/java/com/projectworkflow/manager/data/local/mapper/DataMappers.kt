@@ -45,7 +45,8 @@ object DataMappers {
             targetEndDate = targetEndTimestamp.toLocalDateTime(),
             progress = progress,
             stages = stages,
-            meetings = meetings
+            meetings = meetings,
+            businessClosure = parseBusinessClosure(businessClosureJson)
         )
     }
 
@@ -63,6 +64,7 @@ object DataMappers {
             currentFocusAction = currentFocusAction,
             documentStatus = documentStatus.name,
             buildingTasksJson = serializeBuildingTasks(buildingTasks),
+            businessClosureJson = serializeBusinessClosure(businessClosure),
             startTimestamp = startDate.toEpochMillis(),
             targetEndTimestamp = targetEndDate.toEpochMillis(),
             progress = progress
@@ -171,5 +173,36 @@ object DataMappers {
         return tasks.joinToString(";;") { task ->
             "${task.name}|${task.progress}|${task.estimatedDays}|${task.remainingDays}|${task.statusText}"
         }
+    }
+
+    fun parseBusinessClosure(raw: String): BusinessClosureStatus {
+        if (raw.isBlank()) return BusinessClosureStatus()
+        val parts = raw.split(";;")
+        fun parseItem(idx: Int): Pair<Boolean, String> {
+            val seg = parts.getOrNull(idx) ?: return Pair(false, "")
+            val p = seg.split("|", limit = 2)
+            return Pair(p.getOrNull(0) == "1", p.getOrNull(1) ?: "")
+        }
+        val inv = parseItem(0)
+        val pay = parseItem(1)
+        val ret = parseItem(2)
+        val conf = parseItem(3)
+        return BusinessClosureStatus(
+            isInvoiced = inv.first,
+            invoiceNote = inv.second,
+            isPaymentReceived = pay.first,
+            paymentNote = pay.second,
+            isReturnVisitDone = ret.first,
+            returnVisitNote = ret.second,
+            isConfirmationReceived = conf.first,
+            confirmationNote = conf.second
+        )
+    }
+
+    fun serializeBusinessClosure(status: BusinessClosureStatus): String {
+        return "${if (status.isInvoiced) "1" else "0"}|${status.invoiceNote};;" +
+               "${if (status.isPaymentReceived) "1" else "0"}|${status.paymentNote};;" +
+               "${if (status.isReturnVisitDone) "1" else "0"}|${status.returnVisitNote};;" +
+               "${if (status.isConfirmationReceived) "1" else "0"}|${status.confirmationNote}"
     }
 }

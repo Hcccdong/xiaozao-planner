@@ -701,17 +701,31 @@ private fun ProjectProgressCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = project.name,
-                color = TextPrimaryDark,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                    .padding(end = 8.dp)
+            ) {
+                Text(
+                    text = project.name,
+                    color = TextPrimaryDark,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                StatusPill(
+                    text = project.projectType.label,
+                    tagType = when (project.projectType) {
+                        CostProjectType.BUDGET -> TagType.SUCCESS_GREEN
+                        CostProjectType.SETTLEMENT -> TagType.URGENT_RED
+                        CostProjectType.WHOLE_PROCESS -> TagType.WARNING_AMBER
+                    }
+                )
+            }
             Text(
                 text = "${project.progress}%",
                 color = BluePrimary,
@@ -762,6 +776,7 @@ private fun ProjectNodeGroupCard(
     val project = group.project
     val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
     val today = LocalDate.now()
+    var isExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -772,11 +787,11 @@ private fun ProjectNodeGroupCard(
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 项目头部：点击可直达工程详情
+        // 项目头部：点击切换展开/折叠
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onNavigateToProject() },
+                .clickable { isExpanded = !isExpanded },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -797,148 +812,197 @@ private fun ProjectNodeGroupCard(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                StatusPill(
+                    text = project.projectType.label,
+                    tagType = when (project.projectType) {
+                        CostProjectType.BUDGET -> TagType.SUCCESS_GREEN
+                        CostProjectType.SETTLEMENT -> TagType.URGENT_RED
+                        CostProjectType.WHOLE_PROCESS -> TagType.WARNING_AMBER
+                    }
                 )
             }
-            StatusPill(
-                text = project.projectType.label,
-                tagType = when (project.projectType) {
-                    CostProjectType.BUDGET -> TagType.SUCCESS_GREEN
-                    CostProjectType.SETTLEMENT -> TagType.URGENT_RED
-                    CostProjectType.WHOLE_PROCESS -> TagType.WARNING_AMBER
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val totalItems = group.meetings.size + group.stageNodes.size
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFF1F5F9))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "共 ${totalItems} 项",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondaryDark
+                    )
                 }
-            )
+
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = TextSecondaryDark,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
-        Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
+        if (isExpanded) {
+            Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
 
-        // 1. 对账会议列表
-        if (group.meetings.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "对账与技术交底会议 (${group.meetings.size})：",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AmberWarningText
-                )
+            // 1. 对账会议列表
+            if (group.meetings.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "对账与技术交底会议 (${group.meetings.size})：",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AmberWarningText
+                    )
 
-                group.meetings.forEach { meeting ->
-                    val mDate = meeting.meetingTime.toLocalDate()
-                    val isToday = mDate == today
-                    val isTomorrow = mDate == today.plusDays(1)
+                    group.meetings.forEach { meeting ->
+                        val mDate = meeting.meetingTime.toLocalDate()
+                        val isToday = mDate == today
+                        val isTomorrow = mDate == today.plusDays(1)
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceBackground)
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
-                                contentDescription = null,
-                                tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = meeting.title,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
-                                    textDecoration = if (meeting.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${meeting.meetingTime.format(timeFormatter)} · ${meeting.meetingType.label}",
-                                    fontSize = 10.sp,
-                                    color = TextSecondaryDark
-                                )
-                            }
-                        }
-
-                        Box(
                             modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceBackground)
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
+                                    contentDescription = null,
+                                    tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = meeting.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
+                                        textDecoration = if (meeting.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${meeting.meetingTime.format(timeFormatter)} · ${meeting.meetingType.label}",
+                                        fontSize = 10.sp,
+                                        color = TextSecondaryDark
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(if (meeting.isCompleted) GreenSuccessBg else AmberWarningBg)
                                 .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = if (meeting.isCompleted) "已开完" else if (isToday) "今日开会" else if (isTomorrow) "明日开会" else "待召开",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (meeting.isCompleted) GreenSuccessText else AmberWarningText
-                            )
+                            ) {
+                                Text(
+                                    text = if (meeting.isCompleted) "已开完" else if (isToday) "今日开会" else if (isTomorrow) "明日开会" else "待召开",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (meeting.isCompleted) GreenSuccessText else AmberWarningText
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // 2. 进行中阶段与交付节点
-        if (group.stageNodes.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // 2. 进行中阶段与交付节点
+            if (group.stageNodes.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "专业阶段交付节点 (${group.stageNodes.size})：",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary
+                    )
+
+                    group.stageNodes.forEach { node ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceBackground)
+                                .clickable { onNavigateToProject() }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Flag,
+                                    contentDescription = null,
+                                    tint = BluePrimary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = node.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimaryDark,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${node.timeText} · ${node.detail}",
+                                        fontSize = 10.sp,
+                                        color = TextSecondaryDark,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            StatusPill(text = node.statusText, tagType = node.tagType)
+                        }
+                    }
+                }
+            }
+
+            // 快捷进入项目详情按钮
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceBackground)
+                    .clickable { onNavigateToProject() }
+                    .padding(vertical = 6.dp, horizontal = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "专业阶段交付节点 (${group.stageNodes.size})：",
+                    text = "进入该项目详情与全流程流水线 →",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = BluePrimary
                 )
-
-                group.stageNodes.forEach { node ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceBackground)
-                            .clickable { onNavigateToProject() }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Flag,
-                                contentDescription = null,
-                                tint = BluePrimary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = node.title,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimaryDark,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${node.timeText} · ${node.detail}",
-                                    fontSize = 10.sp,
-                                    color = TextSecondaryDark,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        StatusPill(text = node.statusText, tagType = node.tagType)
-                    }
-                }
             }
         }
     }

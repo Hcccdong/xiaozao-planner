@@ -275,6 +275,16 @@ fun ProjectDetailScreen(
                     )
                 }
 
+                // 2.6 【商务结算与成果归档追踪】(是否开票、是否收费到账、是否出具回访单、是否收到成果确认单)
+                item {
+                    ProjectBusinessClosureCard(
+                        businessClosure = project.businessClosure,
+                        onUpdateStatus = { newStatus ->
+                            viewModel.updateBusinessClosure(projectId, newStatus)
+                        }
+                    )
+                }
+
                 // 3. 【专业流程阶段流水线】
                 item {
                     Row(
@@ -848,13 +858,20 @@ private fun StageSubTaskItem(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 Text(
-                    text = "(${task.estimatedDays}天 ✎)",
-                    fontSize = 11.sp,
+                    text = "${task.estimatedDays}天 ✎",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
                     color = BluePrimary,
-                    fontWeight = FontWeight.Bold
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(BlueLight)
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
 
@@ -1400,7 +1417,7 @@ private fun ProjectMeetingsCard(
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
     val today = LocalDate.now()
-    var isExpanded by remember { mutableStateOf(true) }
+    var isExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -1573,4 +1590,327 @@ private fun ProjectMeetingsCard(
             }
         }
     }
+}
+
+/**
+ * 商务结算与成果归档追踪大卡片 (是否开票、是否收费到账、是否出具回访单、是否收到成果确认单)
+ */
+@Composable
+private fun ProjectBusinessClosureCard(
+    businessClosure: com.projectworkflow.manager.domain.model.BusinessClosureStatus,
+    onUpdateStatus: (com.projectworkflow.manager.domain.model.BusinessClosureStatus) -> Unit
+) {
+    var editingItemKey by remember { mutableStateOf<String?>(null) }
+    var isExpanded by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // 卡片头部 (点击折叠/展开)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Flag,
+                    contentDescription = null,
+                    tint = if (businessClosure.isAllDone) GreenSuccessText else BluePrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "商务结算与成果归档追踪",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (businessClosure.isAllDone) GreenSuccessBg else Color(0xFFF1F5F9))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (businessClosure.isAllDone) "全闭环已达成" else "已完成 ${businessClosure.completedCount}/4",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (businessClosure.isAllDone) GreenSuccessText else TextSecondaryDark
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = TextSecondaryDark,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        if (isExpanded) {
+            Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 1. 是否开票
+                BusinessClosureItemRow(
+                    title = "是否开票",
+                    isCompleted = businessClosure.isInvoiced,
+                    completedBadgeText = "已开票",
+                    pendingBadgeText = "未开票",
+                    note = businessClosure.invoiceNote,
+                    placeholder = "点击补充发票号码/开票金额/日期",
+                    onToggle = {
+                        onUpdateStatus(businessClosure.copy(isInvoiced = !businessClosure.isInvoiced))
+                    },
+                    onEditNote = { editingItemKey = "invoice" }
+                )
+
+                // 2. 是否收费到账
+                BusinessClosureItemRow(
+                    title = "是否收费到账",
+                    isCompleted = businessClosure.isPaymentReceived,
+                    completedBadgeText = "已到账",
+                    pendingBadgeText = "待到账",
+                    note = businessClosure.paymentNote,
+                    placeholder = "点击补充到账金额/收款日期/方式",
+                    onToggle = {
+                        onUpdateStatus(businessClosure.copy(isPaymentReceived = !businessClosure.isPaymentReceived))
+                    },
+                    onEditNote = { editingItemKey = "payment" }
+                )
+
+                // 3. 是否收到成果确认单
+                BusinessClosureItemRow(
+                    title = "是否收到成果确认单",
+                    isCompleted = businessClosure.isConfirmationReceived,
+                    completedBadgeText = "已收确认单",
+                    pendingBadgeText = "待客户确认",
+                    note = businessClosure.confirmationNote,
+                    placeholder = "点击补充客户盖章确认单编号/签收说明",
+                    onToggle = {
+                        onUpdateStatus(businessClosure.copy(isConfirmationReceived = !businessClosure.isConfirmationReceived))
+                    },
+                    onEditNote = { editingItemKey = "confirmation" }
+                )
+
+                // 4. 是否出具回访单
+                BusinessClosureItemRow(
+                    title = "是否出具回访单",
+                    isCompleted = businessClosure.isReturnVisitDone,
+                    completedBadgeText = "已出具回访",
+                    pendingBadgeText = "待客户回访",
+                    note = businessClosure.returnVisitNote,
+                    placeholder = "点击补充客户满意度评价/服务回访记录",
+                    onToggle = {
+                        onUpdateStatus(businessClosure.copy(isReturnVisitDone = !businessClosure.isReturnVisitDone))
+                    },
+                    onEditNote = { editingItemKey = "returnVisit" }
+                )
+            }
+        }
+    }
+
+    // 录入与编辑弹窗
+    editingItemKey?.let { key ->
+        val dialogTitle = when (key) {
+            "invoice" -> "发票开具信息录入"
+            "payment" -> "收费到账信息录入"
+            "confirmation" -> "成果确认单盖章情况"
+            "returnVisit" -> "服务回访单与客户评价"
+            else -> "说明录入"
+        }
+        val currentNote = when (key) {
+            "invoice" -> businessClosure.invoiceNote
+            "payment" -> businessClosure.paymentNote
+            "confirmation" -> businessClosure.confirmationNote
+            "returnVisit" -> businessClosure.returnVisitNote
+            else -> ""
+        }
+        val isCurrentlyChecked = when (key) {
+            "invoice" -> businessClosure.isInvoiced
+            "payment" -> businessClosure.isPaymentReceived
+            "confirmation" -> businessClosure.isConfirmationReceived
+            "returnVisit" -> businessClosure.isReturnVisitDone
+            else -> false
+        }
+
+        EditBusinessClosureDialog(
+            title = dialogTitle,
+            initialNote = currentNote,
+            initialChecked = isCurrentlyChecked,
+            onDismiss = { editingItemKey = null },
+            onConfirm = { checked, note ->
+                val newStatus = when (key) {
+                    "invoice" -> businessClosure.copy(isInvoiced = checked, invoiceNote = note)
+                    "payment" -> businessClosure.copy(isPaymentReceived = checked, paymentNote = note)
+                    "confirmation" -> businessClosure.copy(isConfirmationReceived = checked, confirmationNote = note)
+                    "returnVisit" -> businessClosure.copy(isReturnVisitDone = checked, returnVisitNote = note)
+                    else -> businessClosure
+                }
+                onUpdateStatus(newStatus)
+                editingItemKey = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun BusinessClosureItemRow(
+    title: String,
+    isCompleted: Boolean,
+    completedBadgeText: String,
+    pendingBadgeText: String,
+    note: String,
+    placeholder: String,
+    onToggle: () -> Unit,
+    onEditNote: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .clickable { onEditNote() }
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = GreenSuccessText,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onToggle() }
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .border(1.5.dp, BorderColor, CircleShape)
+                        .clickable { onToggle() }
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+                Text(
+                    text = if (note.isNotBlank()) note else placeholder,
+                    fontSize = 11.sp,
+                    color = if (note.isNotBlank()) BluePrimary else TextSecondaryDark.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isCompleted) GreenSuccessBg else Color(0xFFF1F5F9))
+                .clickable { onToggle() }
+                .padding(horizontal = 7.dp, vertical = 2.5.dp)
+        ) {
+            Text(
+                text = if (isCompleted) completedBadgeText else pendingBadgeText,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isCompleted) GreenSuccessText else TextSecondaryDark,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
+/**
+ * 商务闭环条目编辑弹窗 (支持状态快速打勾与详细文本备注说明)
+ */
+@Composable
+private fun EditBusinessClosureDialog(
+    title: String,
+    initialNote: String,
+    initialChecked: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (checked: Boolean, note: String) -> Unit
+) {
+    var noteText by remember { mutableStateOf(initialNote) }
+    var checked by remember { mutableStateOf(initialChecked) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceBackground)
+                        .clickable { checked = !checked }
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = { checked = it }
+                    )
+                    Text(
+                        text = if (checked) "当前状态：已完成" else "当前状态：未完成/待办",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = if (checked) GreenSuccessText else TextPrimaryDark
+                    )
+                }
+
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { noteText = it },
+                    label = { Text("详细信息与备注说明") },
+                    placeholder = { Text("如发票号、开票金额、到账时间、签收人、客户满意度等") },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(checked, noteText.trim()) }) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

@@ -62,6 +62,7 @@ object ProjectBackupManager {
                     put("currentFocusAction", p.currentFocusAction)
                     put("documentStatus", p.documentStatus)
                     put("buildingTasksJson", p.buildingTasksJson)
+                    put("businessClosureJson", p.businessClosureJson)
                     put("startTimestamp", p.startTimestamp)
                     put("targetEndTimestamp", p.targetEndTimestamp)
                     put("progress", p.progress)
@@ -164,6 +165,7 @@ object ProjectBackupManager {
                     currentFocusAction = pJson.optString("currentFocusAction", "按计划推进"),
                     documentStatus = pJson.optString("documentStatus", "COMPLETE"),
                     buildingTasksJson = pJson.optString("buildingTasksJson", ""),
+                    businessClosureJson = pJson.optString("businessClosureJson", ""),
                     startTimestamp = pJson.optLong("startTimestamp", System.currentTimeMillis()),
                     targetEndTimestamp = pJson.optLong("targetEndTimestamp", System.currentTimeMillis() + 30L * 86400000L),
                     progress = pJson.optInt("progress", 0)

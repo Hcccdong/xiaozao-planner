@@ -13,6 +13,7 @@ import com.projectworkflow.manager.data.local.mapper.DataMappers.toEntity
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
 import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.BuildingSubTask
+import com.projectworkflow.manager.domain.model.BusinessClosureStatus
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.model.ProjectStatus
 import com.projectworkflow.manager.domain.model.Stage
@@ -187,6 +188,11 @@ class ProjectRepositoryImpl(
 
     override suspend fun deleteProject(projectId: Long) {
         projectDao.deleteProjectById(projectId)
+    }
+
+    override suspend fun updateProjectBusinessClosure(projectId: Long, status: BusinessClosureStatus) {
+        val serialized = DataMappers.serializeBusinessClosure(status)
+        projectDao.updateProjectBusinessClosure(projectId, serialized)
     }
 
     // ========== 阶段专属单体/专业子项拆解管理 ==========

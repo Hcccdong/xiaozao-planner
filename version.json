@@ -1,8 +1,8 @@
 {
-  "versionCode": 11,
-  "versionName": "1.5.5",
-  "updateLog": "1. 彻底修复单体栏排版换行异常：修复屏幕横向空间挤压导致的「添加单体」文字单字竖排夸张换行问题，重构为轻量胶囊操作组并从底层锁定防折行\n2. 阶段与单体操作区视觉瘦身：文案精简为「转整体」、「+ 添加」、「修改工期」，按钮组采用等宽自适应排版，小屏手机阅读更清爽\n3. 工期与进度显示防挤压强化：阶段耗时与单体微调全面增加单行文本保护与弹性权重，杜绝任何错位",
-  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.5/xiaozao-planner_v1.5.5.apk",
+  "versionCode": 12,
+  "versionName": "1.5.6",
+  "updateLog": "1. 会议卡片默认折叠：项目详情页中【造价对账会议与关键节点】卡片默认收起为紧凑汇总条，按需展开，大幅释放屏幕空间\n2. 修复单体拆解天数错行：为长事项名称增加自适应弹性宽度与省略保护，天数小胶囊独立单行锁定，彻底杜绝换行突兀\n3. 节点模块支持各项目事项独立折叠：首页节点 Tab 中每个工程卡片可自由展开/折叠，包含事项计数徽章与直达详情快捷入口\n4. 首页项目卡片追加类型标识：工程列表项目名称后紧随【预算工程/结算审核/全过程造价】彩色胶囊标签，项目属性一目了然\n5. 新增商务结算与成果归档追踪：全流程支持记录【是否开票】、【是否收费到账】、【是否出具回访单】、【是否收到成果确认单】，支持状态一键打勾与详细款项/单号/回访记录录入",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.6/xiaozao-planner_v1.5.6.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }

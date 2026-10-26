@@ -35,6 +35,9 @@ interface ProjectDao {
     @Query("UPDATE projects SET progress = :progress, status = :status WHERE id = :projectId")
     suspend fun updateProjectProgress(projectId: Long, progress: Int, status: String)
 
+    @Query("UPDATE projects SET businessClosureJson = :businessClosureJson WHERE id = :projectId")
+    suspend fun updateProjectBusinessClosure(projectId: Long, businessClosureJson: String)
+
     @Delete
     suspend fun deleteProject(project: ProjectEntity)
 

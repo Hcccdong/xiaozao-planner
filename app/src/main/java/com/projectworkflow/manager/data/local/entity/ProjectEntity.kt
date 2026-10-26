@@ -20,6 +20,7 @@ data class ProjectEntity(
     val currentFocusAction: String = "",
     val documentStatus: String = "COMPLETE", // COMPLETE, MISSING_CRITICAL, PENDING_VERIFY
     val buildingTasksJson: String = "",     // 序列化的楼栋单体任务列表
+    val businessClosureJson: String = "",   // 序列化的商务闭环与归档追踪 (开票、到账、回访、成果确认单)
 
     val startTimestamp: Long,
     val targetEndTimestamp: Long,

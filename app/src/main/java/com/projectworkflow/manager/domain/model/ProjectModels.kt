@@ -34,6 +34,30 @@ data class BuildingSubTask(
 )
 
 /**
+ * 项目商务闭环与成果归档追踪状态 (开票、收费、回访单、成果确认单)
+ */
+data class BusinessClosureStatus(
+    val isInvoiced: Boolean = false,               // 是否开票
+    val invoiceNote: String = "",                  // 开票说明/发票号/开票金额
+    val isPaymentReceived: Boolean = false,        // 是否收费到账
+    val paymentNote: String = "",                  // 到账说明/收费金额/到账日期
+    val isReturnVisitDone: Boolean = false,        // 是否出具回访单
+    val returnVisitNote: String = "",              // 回访单说明/客户评价
+    val isConfirmationReceived: Boolean = false,   // 是否收到成果确认单
+    val confirmationNote: String = ""              // 成果确认单盖章情况/签收单号
+) {
+    /** 统计已完成的商务闭环事项数 (0 - 4) */
+    val completedCount: Int
+        get() = (if (isInvoiced) 1 else 0) +
+                (if (isPaymentReceived) 1 else 0) +
+                (if (isReturnVisitDone) 1 else 0) +
+                (if (isConfirmationReceived) 1 else 0)
+
+    val isAllDone: Boolean
+        get() = completedCount == 4
+}
+
+/**
  * 项目业务领域模型
  */
 data class Project(
@@ -58,7 +82,8 @@ data class Project(
 
     val buildingTasks: List<BuildingSubTask> = emptyList(), // 楼栋/单体拆解
     val stages: List<Stage> = emptyList(),                  // 各阶段进度
-    val meetings: List<Meeting> = emptyList()               // 阶段会议
+    val meetings: List<Meeting> = emptyList(),              // 阶段会议
+    val businessClosure: BusinessClosureStatus = BusinessClosureStatus() // 商务结算与成果归档闭环追踪
 )
 
 enum class ProjectStatus(val label: String) {

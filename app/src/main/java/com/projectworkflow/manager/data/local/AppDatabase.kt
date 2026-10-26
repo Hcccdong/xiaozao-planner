@@ -19,7 +19,7 @@ import com.projectworkflow.manager.data.local.entity.StageEntity
         StageEntity::class,
         MeetingEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -69,6 +69,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v4 -> v5 平滑增量迁移策略：
+         * 在 projects 表中安全增量追加 businessClosureJson 字段，支持商务闭环追踪 (是否开票、是否收费到账、是否出具回访单、是否收到成果确认单)
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE projects ADD COLUMN businessClosureJson TEXT NOT NULL DEFAULT ''")
+                } catch (e: Exception) {
+                    // 若字段已存在则静默忽略
+                }
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -77,7 +91,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "project_management_clean.db"
                 )
                     // 彻底移除破坏性重置指令，通过显式增量迁移保证历史数据永久安全
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance
