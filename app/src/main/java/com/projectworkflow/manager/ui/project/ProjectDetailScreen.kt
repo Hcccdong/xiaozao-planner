@@ -2148,7 +2148,8 @@ private fun EditMeetingDialog(
                         (16 to 0) to "16:00",
                         (19 to 0) to "19:00"
                     )
-                    timesOptions.forEach { ((h, m), label) ->
+                    timesOptions.forEach { (timePair, label) ->
+                        val (h, m) = timePair
                         val isSelected = selectedHour == h && selectedMinute == m
                         Box(
                             modifier = Modifier
