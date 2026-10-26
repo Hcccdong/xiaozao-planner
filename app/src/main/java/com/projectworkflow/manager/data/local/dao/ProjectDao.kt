@@ -13,6 +13,13 @@ interface ProjectDao {
     fun getAllProjectsWithDetailsFlow(): Flow<List<ProjectWithDetails>>
 
     @Transaction
+    @Query("SELECT * FROM projects ORDER BY createdAt DESC")
+    suspend fun getAllProjectsWithDetailsList(): List<ProjectWithDetails>
+
+    @Query("SELECT COUNT(*) FROM projects")
+    suspend fun getProjectCount(): Int
+
+    @Transaction
     @Query("SELECT * FROM projects WHERE id = :projectId")
     fun getProjectWithDetailsByIdFlow(projectId: Long): Flow<ProjectWithDetails?>
 

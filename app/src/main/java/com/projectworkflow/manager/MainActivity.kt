@@ -31,6 +31,7 @@ import com.projectworkflow.manager.ui.project.ProjectViewModel
 import com.projectworkflow.manager.ui.theme.ProjectWorkflowTheme
 import com.projectworkflow.manager.ui.theme.SurfaceBackground
 
+import com.projectworkflow.manager.ui.backup.BackupDialog
 import com.projectworkflow.manager.ui.update.UpdateDialog
 import com.projectworkflow.manager.update.AppUpdateInfo
 import com.projectworkflow.manager.update.AppUpdateManager
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val coroutineScope = rememberCoroutineScope()
                 var updateInfo by remember { mutableStateOf<AppUpdateInfo?>(null) }
+                var showBackupDialog by remember { mutableStateOf(false) }
 
                 // 启动时多镜像自动静默检查新版本
                 LaunchedEffect(Unit) {
@@ -130,7 +132,10 @@ class MainActivity : ComponentActivity() {
                                 onOpenCreateProject = {
                                     showCreateProjectSheet = true
                                 },
-                                onCheckUpdate = handleManualCheckUpdate
+                                onCheckUpdate = handleManualCheckUpdate,
+                                onOpenBackup = {
+                                    showBackupDialog = true
+                                }
                             )
                         }
 
@@ -224,6 +229,16 @@ class MainActivity : ComponentActivity() {
                             onConfirmUpdate = {
                                 AppUpdateManager.downloadAndInstallApk(context, info)
                                 updateInfo = null
+                            }
+                        )
+                    }
+
+                    // 数据备份与恢复弹窗
+                    if (showBackupDialog) {
+                        BackupDialog(
+                            onDismiss = { showBackupDialog = false },
+                            onDataRestored = {
+                                showBackupDialog = false
                             }
                         )
                     }

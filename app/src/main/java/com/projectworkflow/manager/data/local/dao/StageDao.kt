@@ -7,8 +7,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StageDao {
 
+    @Query("SELECT COUNT(*) FROM stages")
+    suspend fun getStageCount(): Int
+
     @Query("SELECT * FROM stages WHERE projectId = :projectId ORDER BY sortOrder ASC")
     fun getStagesByProjectFlow(projectId: Long): Flow<List<StageEntity>>
+
+    @Query("SELECT COUNT(*) FROM stages")
+    suspend fun getStageCount(): Int
 
     @Query("SELECT * FROM stages WHERE projectId = :projectId ORDER BY sortOrder ASC")
     suspend fun getStagesByProjectId(projectId: Long): List<StageEntity>

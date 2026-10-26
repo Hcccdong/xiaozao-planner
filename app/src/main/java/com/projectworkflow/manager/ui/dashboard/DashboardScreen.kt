@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ fun DashboardScreen(
     onNavigateToAllProjects: () -> Unit,
     onOpenCreateProject: () -> Unit,
     onCheckUpdate: () -> Unit,
+    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -82,29 +84,51 @@ fun DashboardScreen(
                     )
                 }
 
-                // 操作按钮组：检查更新 + 新项目
+                // 操作按钮组：备份 + 检查更新 + 新项目
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(start = 6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.padding(start = 4.dp)
                 ) {
+                    OutlinedButton(
+                        onClick = onOpenBackup,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryDark),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Security,
+                            contentDescription = "数据备份",
+                            tint = TextSecondaryDark,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "备份",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryDark
+                        )
+                    }
+
                     OutlinedButton(
                         onClick = onCheckUpdate,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
                         border = androidx.compose.foundation.BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
-                        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Upgrade,
                             contentDescription = "检查更新",
                             tint = BluePrimary,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = "更新",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = BluePrimary
                         )
@@ -114,12 +138,12 @@ fun DashboardScreen(
                         onClick = onOpenCreateProject,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = "+ 新项目",
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }

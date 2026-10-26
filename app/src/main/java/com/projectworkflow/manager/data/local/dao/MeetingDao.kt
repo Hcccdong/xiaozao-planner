@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MeetingDao {
 
+    @Query("SELECT COUNT(*) FROM meetings")
+    suspend fun getMeetingCount(): Int
+
     @Query("SELECT * FROM meetings ORDER BY meetingTimestamp ASC")
     fun getAllMeetingsFlow(): Flow<List<MeetingEntity>>
 
