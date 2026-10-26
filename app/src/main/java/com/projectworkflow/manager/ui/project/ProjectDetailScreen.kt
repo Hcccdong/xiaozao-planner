@@ -12,7 +12,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Apartment
@@ -36,6 +38,7 @@ import com.projectworkflow.manager.domain.model.TagType
 import com.projectworkflow.manager.ui.components.ModernProgressBar
 import com.projectworkflow.manager.ui.components.StatusPill
 import com.projectworkflow.manager.ui.theme.*
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -257,6 +260,21 @@ fun ProjectDetailScreen(
                     }
                 }
 
+                // 2.5 【造价对账会议与关键协调节点】专区 (彻底解决“安排的对账会议不知道在哪看、点击之后就找不到了”痛点)
+                item {
+                    ProjectMeetingsCard(
+                        meetings = project.meetings,
+                        stages = project.stages,
+                        onAddMeeting = { onOpenCreateMeeting(projectId, null) },
+                        onToggleMeetingCompleted = { mId, completed ->
+                            viewModel.toggleMeetingCompleted(mId, completed)
+                        },
+                        onDeleteMeeting = { mId ->
+                            viewModel.deleteMeeting(mId)
+                        }
+                    )
+                }
+
                 // 3. 【专业流程阶段流水线】
                 item {
                     Row(
@@ -305,11 +323,20 @@ fun ProjectDetailScreen(
                         onAddSubTask = { name, days ->
                             viewModel.addStageSubTask(stage.id, projectId, name, days)
                         },
+                        onEditSubTask = { taskId, name, days ->
+                            viewModel.editStageSubTask(stage.id, projectId, taskId, name, days)
+                        },
                         onDeleteSubTask = { taskId ->
                             viewModel.deleteStageSubTask(stage.id, projectId, taskId)
                         },
+                        onClearSubTasks = {
+                            viewModel.clearStageSubTasks(stage.id, projectId)
+                        },
                         onAddMeeting = {
                             onOpenCreateMeeting(projectId, stage.id)
+                        },
+                        onToggleMeetingCompleted = { meetingId, completed ->
+                            viewModel.toggleMeetingCompleted(meetingId, completed)
                         }
                     )
                 }
@@ -343,12 +370,17 @@ private fun CostStageTimelineItem(
     onUpdateStageDays: (planDays: Int, elapsedDays: Int) -> Unit,
     onUpdateSubTaskProgress: (taskId: String, progress: Int) -> Unit,
     onAddSubTask: (name: String, days: Int) -> Unit,
+    onEditSubTask: (taskId: String, name: String, days: Int) -> Unit,
     onDeleteSubTask: (taskId: String) -> Unit,
-    onAddMeeting: () -> Unit
+    onClearSubTasks: () -> Unit,
+    onAddMeeting: () -> Unit,
+    onToggleMeetingCompleted: (Long, Boolean) -> Unit
 ) {
     var isSubTasksExpanded by remember { mutableStateOf(stage.progress < 100) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDaysDialog by remember { mutableStateOf(false) }
+    var editingSubTask by remember { mutableStateOf<BuildingSubTask?>(null) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     Row(modifier = Modifier.fillMaxWidth()) {
         // 左侧时间轴圆点与连接线
@@ -514,13 +546,33 @@ private fun CostStageTimelineItem(
                     )
                 }
 
-                Text(
-                    text = "+ 添加单体/分部",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BluePrimary,
-                    modifier = Modifier.clickable { showAddDialog = true }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 若阶段内已有单体，允许一键清空转为阶段整体推进模式 (解决“有些项目我就不分单体了 按整体考虑”痛点)
+                    if (stage.subTasks.isNotEmpty()) {
+                        Text(
+                            text = "转为整体推进",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AmberWarningText,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(AmberWarningBg)
+                                .clickable { showClearConfirmDialog = true }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "+ 添加单体/分部",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary,
+                        modifier = Modifier.clickable { showAddDialog = true }
+                    )
+                }
             }
 
             // 展开内容
@@ -533,9 +585,10 @@ private fun CostStageTimelineItem(
                 ) {
                     if (stage.subTasks.isEmpty()) {
                         Text(
-                            text = "该阶段暂未拆解单体或专业，可点击上方「+ 添加」划分单体/专业，或直接在下方调整阶段总进度",
+                            text = "当前按整体推进，直接在下方调整阶段总进度；若需要细分子项，可点击右上角「+ 添加单体/分部」随时细化拆解",
                             fontSize = 11.sp,
                             color = TextSecondaryDark,
+                            lineHeight = 15.sp,
                             modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
                         )
                     } else {
@@ -544,6 +597,9 @@ private fun CostStageTimelineItem(
                                 task = subTask,
                                 onUpdateProgress = { newProgress ->
                                     onUpdateSubTaskProgress(subTask.id, newProgress)
+                                },
+                                onEdit = {
+                                    editingSubTask = subTask
                                 },
                                 onDelete = {
                                     onDeleteSubTask(subTask.id)
@@ -561,7 +617,7 @@ private fun CostStageTimelineItem(
             Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 若本阶段没有单体子项，显示拖拽滑块直接调整阶段总进度
+            // 若本阶段没有单体子项，显示拖拽滑块直接调整阶段总进度 (完美契合整体推进模式)
             if (stage.subTasks.isEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -643,12 +699,15 @@ private fun CostStageTimelineItem(
                 }
             }
 
-            // 配套会议
+            // 配套会议 (支持直接点击切换完成状态，若阶段100%已自动达成)
             if (stage.meetings.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(text = "阶段配套对账会议:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text(text = "阶段配套对账会议 (点击状态可切换已开完):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
                 stage.meetings.forEach { meeting ->
-                    MeetingSmallBadge(meeting = meeting)
+                    MeetingSmallBadge(
+                        meeting = meeting,
+                        onToggleCompleted = { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                    )
                 }
             }
         }
@@ -679,15 +738,61 @@ private fun CostStageTimelineItem(
             }
         )
     }
+
+    // 编辑已有单体/专业子项名称与预估天数弹窗 (彻底解决“天数不能手动修改”痛点)
+    editingSubTask?.let { taskToEdit ->
+        EditStageSubTaskDialog(
+            stage = stage,
+            task = taskToEdit,
+            onDismiss = { editingSubTask = null },
+            onConfirm = { newName, newDays ->
+                onEditSubTask(taskToEdit.id, newName, newDays)
+                editingSubTask = null
+            }
+        )
+    }
+
+    // 清空单体转为整体推进确认弹窗
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            title = { Text("转为整体推进模式", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Text(
+                    "确定要清空该阶段下的所有单体拆解吗？清空后该阶段将转为按整体把控，直接使用滑块整体调整阶段进度，界面更清爽。",
+                    fontSize = 12.sp,
+                    color = TextSecondaryDark,
+                    lineHeight = 16.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearSubTasks()
+                        showClearConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AmberWarningText)
+                ) {
+                    Text("确认清空并转整体")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 /**
- * 融入阶段内部的单体/专业拆解条目 (支持滑块拖拽、微调退回、删除)
+ * 融入阶段内部的单体/专业拆解条目 (支持滑块拖拽、微调退回、点击修改天数/名称、删除)
  */
 @Composable
 private fun StageSubTaskItem(
     task: BuildingSubTask,
     onUpdateProgress: (Int) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var sliderProgress by remember(task.progress) { mutableFloatStateOf(task.progress.toFloat()) }
@@ -701,6 +806,71 @@ private fun StageSubTaskItem(
             .padding(10.dp)
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onEdit() }
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Apartment,
+                    contentDescription = null,
+                    tint = TextSecondaryDark,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = task.name,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "(${task.estimatedDays}天 ✎)",
+                    fontSize = 11.sp,
+                    color = BluePrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                StatusPill(
+                    text = task.statusText,
+                    tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
+                )
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "修改单体/天数",
+                        tint = BluePrimary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除此项",
+                        tint = RedUrgentText,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -725,10 +895,10 @@ private fun StageSubTaskItem(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "(${task.estimatedDays}天)",
+                    text = "(${task.estimatedDays}天 ✎)",
                     fontSize = 11.sp,
-                    color = TextSecondaryDark,
-                    fontWeight = FontWeight.Medium
+                    color = BluePrimary,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -740,6 +910,17 @@ private fun StageSubTaskItem(
                     text = task.statusText,
                     tagType = if (task.progress >= 100) TagType.SUCCESS_GREEN else if (task.progress > 0) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY
                 )
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "修改单体/天数",
+                        tint = BluePrimary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(20.dp)
@@ -1112,7 +1293,10 @@ private fun EditProjectDaysDialog(
 }
 
 @Composable
-private fun MeetingSmallBadge(meeting: Meeting) {
+private fun MeetingSmallBadge(
+    meeting: Meeting,
+    onToggleCompleted: () -> Unit
+) {
     val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
     Row(
         modifier = Modifier
@@ -1120,6 +1304,7 @@ private fun MeetingSmallBadge(meeting: Meeting) {
             .padding(top = 4.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceBackground)
+            .clickable { onToggleCompleted() }
             .padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1132,9 +1317,9 @@ private fun MeetingSmallBadge(meeting: Meeting) {
                 .padding(end = 8.dp)
         ) {
             Icon(
-                imageVector = Icons.Outlined.Event,
+                imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
                 contentDescription = null,
-                tint = AmberWarningText,
+                tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
                 modifier = Modifier.size(14.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -1142,7 +1327,8 @@ private fun MeetingSmallBadge(meeting: Meeting) {
                     text = meeting.title,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark,
+                    color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
+                    textDecoration = if (meeting.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
@@ -1157,5 +1343,278 @@ private fun MeetingSmallBadge(meeting: Meeting) {
             text = if (meeting.isCompleted) "已开完" else "待召开",
             tagType = if (meeting.isCompleted) TagType.NEUTRAL_GRAY else TagType.WARNING_AMBER
         )
+    }
+}
+
+/**
+ * 编辑已有单体/专业子项名称与预估天数弹窗 (支持实时比对阶段总天数)
+ */
+@Composable
+private fun EditStageSubTaskDialog(
+    stage: Stage,
+    task: BuildingSubTask,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, days: Int) -> Unit
+) {
+    val stagePlanDays = stage.planDays
+    val otherTasksDays = stage.subTasks.filter { it.id != task.id }.sumOf { it.estimatedDays }
+    var taskName by remember { mutableStateOf(task.name) }
+    var taskDaysText by remember { mutableStateOf(task.estimatedDays.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(text = "编辑单体 / 专业分项", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "归属阶段: ${stage.name}", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val enteredDays = taskDaysText.toIntOrNull() ?: 0
+                val totalAfterEdit = otherTasksDays + enteredDays
+                val (feedbackText, feedbackColor) = when {
+                    totalAfterEdit == stagePlanDays ->
+                        Pair("✓ 调整后合计 ${stagePlanDays} 天，与阶段计划工期完全一致", GreenSuccessText)
+                    totalAfterEdit < stagePlanDays ->
+                        Pair("ℹ 调整后合计 ${totalAfterEdit} 天，尚有 ${stagePlanDays - totalAfterEdit} 天未分配", TextSecondaryDark)
+                    else ->
+                        Pair("⚠ 调整后合计 ${totalAfterEdit} 天，超出阶段计划 ${totalAfterEdit - stagePlanDays} 天", AmberWarningText)
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFF8FAFC))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(text = "阶段计划工期: ${stagePlanDays} 天 · 其他单体合计: ${otherTasksDays} 天", fontSize = 11.sp, color = TextSecondaryDark)
+                    Text(text = feedbackText, fontSize = 10.sp, color = feedbackColor, fontWeight = FontWeight.Medium)
+                }
+
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("单体/分项名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = taskDaysText,
+                    onValueChange = { taskDaysText = it.filter { c -> c.isDigit() }.take(4) },
+                    label = { Text("预估工期 (天)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val d = taskDaysText.toIntOrNull()?.coerceAtLeast(1) ?: task.estimatedDays
+                    onConfirm(taskName, d)
+                },
+                enabled = taskName.isNotBlank()
+            ) {
+                Text("保存修改")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 专为项目打造的对账会议与关键节点专区 (彻底解决“安排的对账会议不知道在哪看、点击之后就找不到了”痛点)
+ */
+@Composable
+private fun ProjectMeetingsCard(
+    meetings: List<Meeting>,
+    stages: List<Stage>,
+    onAddMeeting: () -> Unit,
+    onToggleMeetingCompleted: (meetingId: Long, completed: Boolean) -> Unit,
+    onDeleteMeeting: (meetingId: Long) -> Unit
+) {
+    val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
+    val today = LocalDate.now()
+    var isExpanded by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clickable { isExpanded = !isExpanded }
+                    .weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Event,
+                    contentDescription = null,
+                    tint = AmberWarningText,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "造价对账会议与关键节点 (${meetings.size}场)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = TextSecondaryDark,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Text(
+                text = "+ 安排会议",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = BluePrimary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(BlueLight)
+                    .clickable { onAddMeeting() }
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (meetings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceBackground)
+                        .padding(vertical = 14.dp, horizontal = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "暂无安排对账会议，点击右上角「+ 安排会议」预约技术交底与核对",
+                        fontSize = 11.sp,
+                        color = TextSecondaryDark
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    meetings.forEach { meeting ->
+                        val mDate = meeting.meetingTime.toLocalDate()
+                        val isToday = mDate == today
+                        val isTomorrow = mDate == today.plusDays(1)
+                        val stageName = stages.firstOrNull { it.id == meeting.stageId }?.name ?: "全项目统筹"
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceBackground)
+                                .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
+                                .padding(10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
+                                    contentDescription = null,
+                                    tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                                )
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = meeting.title,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
+                                        textDecoration = if (meeting.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+
+                                    Text(
+                                        text = "${meeting.meetingTime.format(timeFormatter)} · ${meeting.meetingType.label} · 归属: $stageName",
+                                        fontSize = 10.sp,
+                                        color = TextSecondaryDark,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+
+                                    if (!meeting.agenda.isNullOrBlank() || !meeting.locationOrLink.isNullOrBlank()) {
+                                        Text(
+                                            text = "议程/地点: ${meeting.locationOrLink ?: meeting.agenda}",
+                                            fontSize = 10.sp,
+                                            color = TextSecondaryDark,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(top = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (meeting.isCompleted) GreenSuccessBg else AmberWarningBg)
+                                        .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = if (meeting.isCompleted) "已开完" else if (isToday) "今日开会" else if (isTomorrow) "明日开会" else "待召开",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (meeting.isCompleted) GreenSuccessText else AmberWarningText
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { onDeleteMeeting(meeting.id) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "删除会议",
+                                        tint = RedUrgentText,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

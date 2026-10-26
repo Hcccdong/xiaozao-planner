@@ -52,7 +52,8 @@ class ProjectRepositoryImpl(
         template: CostEngineeringTemplate,
         subTasks: List<String>,
         startDate: LocalDateTime,
-        customStages: List<StagePreset>?
+        customStages: List<StagePreset>?,
+        includeDefaultSubTasks: Boolean
     ): Long {
         var currentStageStart = startDate
         val targetEndDate = startDate.plusDays(planDays.toLong())
@@ -77,12 +78,12 @@ class ProjectRepositoryImpl(
         )
         val projectId = projectDao.insertProject(projectEntity)
 
-        // 插入各专业阶段与对应会议，并为各阶段初始化专属单体/专业子项拆解
+        // 插入各专业阶段与对应会议，并按用户意向决定是否初始化专属单体/专业子项拆解
         stagesToUse.forEachIndexed { index, preset ->
             val stageEnd = currentStageStart.plusDays(preset.durationDays)
 
-            // 为该阶段初始化单体或专业分项
-            val stageSubTasksJson = if (preset.defaultSubTasks.isNotEmpty()) {
+            // 若用户选择整体推进模式（不细分单体），则直接留空保持纯净
+            val stageSubTasksJson = if (includeDefaultSubTasks && preset.defaultSubTasks.isNotEmpty()) {
                 preset.defaultSubTasks.map { taskName ->
                     "$taskName|0|5|5|未开始"
                 }.joinToString(";;")
@@ -136,7 +137,13 @@ class ProjectRepositoryImpl(
             progress > 0 -> StageStatus.IN_PROGRESS.name
             else -> StageStatus.NOT_STARTED.name
         }
-        stageDao.updateStageProgress(stageId, progress.coerceIn(0, 100), stageStatus)
+        val clampedProgress = progress.coerceIn(0, 100)
+        stageDao.updateStageProgress(stageId, clampedProgress, stageStatus)
+
+        // 阶段达成 100% 时，自动联动将属于该阶段的所有待开对账会议标记为已完成
+        if (clampedProgress >= 100) {
+            meetingDao.updateMeetingsCompletionByStage(stageId, true)
+        }
 
         // 阶段进度联动：自动重新计算全项目综合平均进度
         syncProjectAverageProgress(projectId)
@@ -218,6 +225,11 @@ class ProjectRepositoryImpl(
         val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
         stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
 
+        // 阶段达成 100% 时，自动联动标记本阶段名下会议为已开完
+        if (stageAvgProgress >= 100) {
+            meetingDao.updateMeetingsCompletionByStage(stageId, true)
+        }
+
         // 联动计算项目整体进度
         syncProjectAverageProgress(projectId)
     }
@@ -244,7 +256,35 @@ class ProjectRepositoryImpl(
         val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
         stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
 
+        if (stageAvgProgress >= 100) {
+            meetingDao.updateMeetingsCompletionByStage(stageId, true)
+        }
+
         syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun editStageSubTask(
+        stageId: Long,
+        projectId: Long,
+        taskId: String,
+        name: String,
+        estimatedDays: Int
+    ) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        val currentTasks = DataMappers.parseBuildingTasks(stage.subTasksJson)
+        val updatedTasks = currentTasks.map { task ->
+            if (task.id == taskId) {
+                val clampedDays = estimatedDays.coerceAtLeast(1)
+                val remaining = ((clampedDays * (100 - task.progress)) / 100).coerceAtLeast(0)
+                task.copy(
+                    name = name.trim().ifBlank { task.name },
+                    estimatedDays = clampedDays,
+                    remainingDays = remaining
+                )
+            } else task
+        }
+        val updatedJson = DataMappers.serializeBuildingTasks(updatedTasks)
+        stageDao.updateStageProgressAndSubTasks(stageId, stage.progress, stage.status, updatedJson)
     }
 
     override suspend fun deleteStageSubTask(
@@ -270,6 +310,20 @@ class ProjectRepositoryImpl(
         stageDao.updateStageProgressAndSubTasks(stageId, stageAvgProgress, stageStatus, updatedJson)
 
         syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun clearStageSubTasks(stageId: Long, projectId: Long) {
+        val stage = stageDao.getStageById(stageId) ?: return
+        stageDao.updateStageProgressAndSubTasks(stageId, stage.progress, stage.status, "")
+        syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun toggleMeetingCompleted(meetingId: Long, completed: Boolean) {
+        meetingDao.updateMeetingCompletion(meetingId, completed)
+    }
+
+    override suspend fun deleteMeeting(meetingId: Long) {
+        meetingDao.deleteMeetingById(meetingId)
     }
 
     private suspend fun syncProjectAverageProgress(projectId: Long) {

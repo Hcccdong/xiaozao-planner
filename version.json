@@ -1,8 +1,8 @@
 {
-  "versionCode": 9,
-  "versionName": "1.5.3",
-  "updateLog": "1. 阶段工期与用时精准显性化：阶段卡片直观显示计划工期与已用天数，并新增【修改工期/用时】与项目全局工期校准，彻底支持补流程项目\n2. 添加单体工期统筹对照：弹窗置顶呈现阶段总工期、已分配与剩余天数，自动建议填入剩余工期并提供实时校验，彻底杜绝天数不统一\n3. 阶段流水线视觉精简化：精简流水线标题无冗余括号，优化右侧拥挤小字为清爽阶段计数徽标\n4. 数据库升级至 v4 增量无损平滑迁移，历史项目数据永久安全",
-  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.3/xiaozao-planner_v1.5.3.apk",
+  "versionCode": 10,
+  "versionName": "1.5.4",
+  "updateLog": "1. 阶段达成自动联动会议：阶段达成100%时自动将名下配套对账会议标记为已完成；支持在阶段与详情卡片一键点击切换会议完成状态\n2. 项目对账会议专区与分级重构：项目详情页置顶新增【造价对账会议与关键节点】日程卡片，新排会议秒级直达；首页节点模块按工程分级聚合重构，彻底解决项目混杂无层次问题\n3. 单体拆解自由把控与天数修改：新建工程支持自主选择【按整体推进】或【细分单体】，阶段支持一键【转为整体推进】清空单体；已拆解单体支持点击直接修改名称与预估天数",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.4/xiaozao-planner_v1.5.4.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }

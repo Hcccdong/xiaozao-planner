@@ -19,13 +19,15 @@ class DashboardViewModel(
     private val overviewUseCase = GetDashboardOverviewUseCase(projectRepository, meetingRepository)
 
     private val _selectedTab = MutableStateFlow(DashboardTab.TODAY)
+    private val _selectedNodeFilter = MutableStateFlow(NodeFilter.ALL)
 
     val uiState: StateFlow<DashboardUiState> = combine(
         _selectedTab,
+        _selectedNodeFilter,
         overviewUseCase(),
         projectRepository.getAllProjectsFlow(),
         meetingRepository.getAllMeetingsFlow()
-    ) { tab, overview, projects, meetings ->
+    ) { tab, nodeFilter, overview, projects, meetings ->
         val today = LocalDate.now()
         val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
 
@@ -33,7 +35,7 @@ class DashboardViewModel(
         val stageNodes = projects.flatMap { p ->
             p.stages.filter { it.progress < 100 }.map { s ->
                 val isCurrent = s.status.name == "IN_PROGRESS"
-                val days = java.time.temporal.ChronoUnit.DAYS.between(s.startDate, s.endDate).coerceAtLeast(1)
+                val days = s.planDays
                 DashboardNodeItem(
                     id = "stage_${s.id}",
                     projectId = p.id,
@@ -81,17 +83,58 @@ class DashboardViewModel(
             )
         }
 
-        // 节点合并展示
+        // 构建按项目分级归类的结构（彻底解决“项目和项目混在一起太杂乱”问题）
+        val projectGroups = projects.mapNotNull { p ->
+            val pMeetings = meetings.filter { it.projectId == p.id }
+            val pStages = p.stages.filter { it.progress < 100 }.map { s ->
+                val isCurrent = s.status.name == "IN_PROGRESS"
+                val days = s.planDays
+                DashboardNodeItem(
+                    id = "stage_${s.id}",
+                    projectId = p.id,
+                    projectName = p.name,
+                    title = "交付节点: ${s.name}",
+                    detail = s.deliverableNote?.ifBlank { null } ?: "阶段编制推进中 (${s.progress}%)",
+                    timeText = "工期约 $days 天",
+                    statusText = if (isCurrent) "进行中" else "待启动",
+                    tagType = if (isCurrent) TagType.WARNING_AMBER else TagType.NEUTRAL_GRAY,
+                    isMeeting = false
+                )
+            }
+
+            val filteredMeetings = when (nodeFilter) {
+                NodeFilter.STAGES -> emptyList()
+                else -> pMeetings
+            }
+            val filteredStages = when (nodeFilter) {
+                NodeFilter.MEETINGS -> emptyList()
+                else -> pStages
+            }
+
+            if (filteredMeetings.isNotEmpty() || filteredStages.isNotEmpty()) {
+                ProjectNodeGroup(
+                    project = p,
+                    meetings = filteredMeetings,
+                    stageNodes = filteredStages
+                )
+            } else {
+                null
+            }
+        }
+
+        // 扁平列表保留作为兼容
         val combinedNodes = (meetingNodes + stageNodes).take(30)
 
         DashboardUiState(
             selectedTab = tab,
+            selectedNodeFilter = nodeFilter,
             dateText = overview.dateText,
             metrics = overview.metrics,
             focusItems = overview.focusItems,
             allProjects = projects,
             activeProjects = projects.filter { it.status.name == "IN_PROGRESS" || it.status.name == "DELAYED" },
             allMeetings = meetings,
+            projectNodeGroups = projectGroups,
             milestoneNodes = combinedNodes,
             isLoading = false
         )
@@ -103,6 +146,16 @@ class DashboardViewModel(
 
     fun onSelectTab(tab: DashboardTab) {
         _selectedTab.value = tab
+    }
+
+    fun onSelectNodeFilter(filter: NodeFilter) {
+        _selectedNodeFilter.value = filter
+    }
+
+    fun toggleMeetingCompleted(meetingId: Long, completed: Boolean) {
+        viewModelScope.launch {
+            meetingRepository.markMeetingCompleted(meetingId, completed)
+        }
     }
 
     class Factory(

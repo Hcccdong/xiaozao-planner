@@ -40,6 +40,9 @@ interface MeetingDao {
     @Query("UPDATE meetings SET isCompleted = :completed WHERE id = :meetingId")
     suspend fun updateMeetingCompletion(meetingId: Long, completed: Boolean)
 
+    @Query("UPDATE meetings SET isCompleted = :completed WHERE stageId = :stageId")
+    suspend fun updateMeetingsCompletionByStage(stageId: Long, completed: Boolean)
+
     @Delete
     suspend fun deleteMeeting(meeting: MeetingEntity)
 

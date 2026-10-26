@@ -44,13 +44,15 @@ fun CreateProjectSheet(
         planDays: Int,
         template: CostEngineeringTemplate,
         subTaskNames: List<String>,
-        customStages: List<StagePreset>
+        customStages: List<StagePreset>,
+        includeDefaultSubTasks: Boolean
     ) -> Unit
 ) {
     var projectName by remember { mutableStateOf("") }
     var projectDesc by remember { mutableStateOf("") }
     var selectedTemplate by remember { mutableStateOf(CostEngineeringTemplates.BUDGET_TEMPLATE) }
     var planDaysText by remember { mutableStateOf(selectedTemplate.defaultPlanDays.toString()) }
+    var includeDefaultSubTasks by remember { mutableStateOf(false) } // 默认按整体推进，不强塞单体子项，界面极简
 
     // 可动态编辑增删的专业流程阶段列表 (保留模板预设，支持用户自由编辑阶段与工期)
     var editableStages by remember { mutableStateOf(selectedTemplate.stages) }
@@ -183,6 +185,102 @@ fun CreateProjectSheet(
                 }
             }
 
+            // 单体/专业推进模式选择 (支持“有些项目我就不分单体了 按整体考虑”)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "单体与专业推进模式：",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 模式 A: 按整体推进
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (!includeDefaultSubTasks) BlueLight else SurfaceBackground)
+                            .border(
+                                1.5.dp,
+                                if (!includeDefaultSubTasks) BluePrimary else BorderColor,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { includeDefaultSubTasks = false }
+                            .padding(10.dp)
+                    ) {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (!includeDefaultSubTasks) "●" else "○",
+                                    color = if (!includeDefaultSubTasks) BluePrimary else TextSecondaryDark,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "按整体推进",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!includeDefaultSubTasks) BluePrimary else TextPrimaryDark
+                                )
+                            }
+                            Text(
+                                text = "不拆分子项，阶段整体用滑块推进（极简清爽）",
+                                fontSize = 10.sp,
+                                color = TextSecondaryDark,
+                                lineHeight = 14.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+
+                    // 模式 B: 细分单体/专业
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (includeDefaultSubTasks) BlueLight else SurfaceBackground)
+                            .border(
+                                1.5.dp,
+                                if (includeDefaultSubTasks) BluePrimary else BorderColor,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { includeDefaultSubTasks = true }
+                            .padding(10.dp)
+                    ) {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (includeDefaultSubTasks) "●" else "○",
+                                    color = if (includeDefaultSubTasks) BluePrimary else TextSecondaryDark,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "细分单体/专业",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (includeDefaultSubTasks) BluePrimary else TextPrimaryDark
+                                )
+                            }
+                            Text(
+                                text = "预置分栋与分部分项，适合综合体大工程",
+                                fontSize = 10.sp,
+                                color = TextSecondaryDark,
+                                lineHeight = 14.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             // 专业流程阶段与排期可编辑卡片 (各个单体与专业进度在创建后直接在各阶段内折叠管理)
             Column(
                 modifier = Modifier
@@ -263,7 +361,7 @@ fun CreateProjectSheet(
                 onClick = {
                     if (projectName.isNotBlank()) {
                         val planDays = planDaysText.toIntOrNull() ?: editableStages.sumOf { it.durationDays }.toInt().coerceAtLeast(1)
-                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, emptyList(), editableStages)
+                        onCreateProject(projectName, projectDesc, planDays, selectedTemplate, emptyList(), editableStages, includeDefaultSubTasks)
                     }
                 },
                 enabled = projectName.isNotBlank(),

@@ -20,7 +20,8 @@ interface ProjectRepository {
         template: CostEngineeringTemplate,
         subTasks: List<String> = emptyList(),
         startDate: LocalDateTime,
-        customStages: List<StagePreset>? = null
+        customStages: List<StagePreset>? = null,
+        includeDefaultSubTasks: Boolean = true
     ): Long
     suspend fun updateProject(project: Project)
     suspend fun updateStageProgress(stageId: Long, progress: Int, projectId: Long)
@@ -29,10 +30,16 @@ interface ProjectRepository {
     suspend fun addStageToProject(stage: Stage): Long
     suspend fun deleteProject(projectId: Long)
 
-    // 阶段专属单体/专业拆解子项管理
+    // 阶段专属单体/专业拆解子项管理与整体推进
     suspend fun updateStageSubTaskProgress(stageId: Long, projectId: Long, taskId: String, progress: Int)
     suspend fun addStageSubTask(stageId: Long, projectId: Long, task: BuildingSubTask)
+    suspend fun editStageSubTask(stageId: Long, projectId: Long, taskId: String, name: String, estimatedDays: Int)
     suspend fun deleteStageSubTask(stageId: Long, projectId: Long, taskId: String)
+    suspend fun clearStageSubTasks(stageId: Long, projectId: Long)
+
+    // 关联会议完成状态与删除
+    suspend fun toggleMeetingCompleted(meetingId: Long, completed: Boolean)
+    suspend fun deleteMeeting(meetingId: Long)
 
     // 兼容历史老接口
     suspend fun updateBuildingTaskProgress(projectId: Long, taskId: String, progress: Int)

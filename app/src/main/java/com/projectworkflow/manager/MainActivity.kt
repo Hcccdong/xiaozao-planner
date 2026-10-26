@@ -188,7 +188,7 @@ class MainActivity : ComponentActivity() {
                     if (showCreateProjectSheet) {
                         CreateProjectSheet(
                             onDismiss = { showCreateProjectSheet = false },
-                            onCreateProject = { name, desc, planDays, template, subTasks, customStages ->
+                            onCreateProject = { name, desc, planDays, template, subTasks, customStages, includeSubTasks ->
                                 projectViewModel.createCostProjectFromTemplate(
                                     name = name,
                                     description = desc,
@@ -197,6 +197,7 @@ class MainActivity : ComponentActivity() {
                                     template = template,
                                     subTasks = subTasks,
                                     customStages = customStages,
+                                    includeDefaultSubTasks = includeSubTasks,
                                     onSuccess = { newProjectId ->
                                         showCreateProjectSheet = false
                                         navController.navigate(Screen.ProjectDetail.createRoute(newProjectId))

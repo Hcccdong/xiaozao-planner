@@ -8,7 +8,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
@@ -25,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.projectworkflow.manager.domain.model.CostProjectType
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.model.TagType
 import com.projectworkflow.manager.domain.model.TodayFocusItem
@@ -32,6 +35,8 @@ import com.projectworkflow.manager.ui.components.MetricCard
 import com.projectworkflow.manager.ui.components.ModernProgressBar
 import com.projectworkflow.manager.ui.components.StatusPill
 import com.projectworkflow.manager.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DashboardScreen(
@@ -394,31 +399,66 @@ fun DashboardScreen(
                 }
             }
 
-            // ==================== 视角 C：阶段节点与对账会议排期 ====================
+            // ==================== 视角 C：阶段节点与对账会议排期 (按工程项目清晰分级) ====================
             DashboardTab.NODES -> {
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "工程节点与对账排期 (${uiState.milestoneNodes.size})",
-                            color = TextPrimaryDark,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "点击节点跳转工程",
-                            color = TextSecondaryDark,
-                            fontSize = 11.sp
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "工程节点与对账排期",
+                                color = TextPrimaryDark,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "按工程分级 · 支持一键勾选完成",
+                                color = TextSecondaryDark,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        // 顶部分类过滤药丸 (全部 / 对账会议 / 交付节点)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            NodeFilter.values().forEach { filter ->
+                                val isSelected = uiState.selectedNodeFilter == filter
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) BluePrimary else Color.White)
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) BluePrimary else BorderColor,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable { viewModel.onSelectNodeFilter(filter) }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = when (filter) {
+                                            NodeFilter.ALL -> "全部"
+                                            NodeFilter.MEETINGS -> "📅 对账会议 (${uiState.allMeetings.count { !it.isCompleted }})"
+                                            NodeFilter.STAGES -> "🚩 交付节点"
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else TextPrimaryDark
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                if (uiState.milestoneNodes.isEmpty()) {
+                if (uiState.projectNodeGroups.isEmpty()) {
                     item {
                         Column(
                             modifier = Modifier
@@ -437,23 +477,26 @@ fun DashboardScreen(
                                 modifier = Modifier.size(36.dp)
                             )
                             Text(
-                                text = "暂无进行中的节点与排会",
+                                text = "暂无匹配的工程节点与会议",
                                 color = TextPrimaryDark,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "创建工程项目后，系统将自动排定专业阶段节点与对账会议",
+                                text = "新建工程项目或安排对账会议后，将按工程分级在此清晰呈现",
                                 color = TextSecondaryDark,
                                 fontSize = 12.sp
                             )
                         }
                     }
                 } else {
-                    items(uiState.milestoneNodes) { node ->
-                        MilestoneNodeRow(
-                            node = node,
-                            onClick = { onNavigateToProjectDetail(node.projectId) }
+                    items(uiState.projectNodeGroups) { group ->
+                        ProjectNodeGroupCard(
+                            group = group,
+                            onNavigateToProject = { onNavigateToProjectDetail(group.project.id) },
+                            onToggleMeetingCompleted = { meetingId, completed ->
+                                viewModel.toggleMeetingCompleted(meetingId, completed)
+                            }
                         )
                     }
                 }
@@ -704,5 +747,199 @@ private fun ProjectProgressCard(
 
         Spacer(modifier = Modifier.height(10.dp))
         ModernProgressBar(progress = project.progress)
+    }
+}
+
+/**
+ * 按工程分级展示的节点与对账会议聚合大卡片 (彻底解决项目与项目混在一起的痛点)
+ */
+@Composable
+private fun ProjectNodeGroupCard(
+    group: ProjectNodeGroup,
+    onNavigateToProject: () -> Unit,
+    onToggleMeetingCompleted: (Long, Boolean) -> Unit
+) {
+    val project = group.project
+    val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
+    val today = LocalDate.now()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(CardBackground)
+            .border(1.dp, BorderColor, RoundedCornerShape(18.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // 项目头部：点击可直达工程详情
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onNavigateToProject() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Apartment,
+                    contentDescription = null,
+                    tint = BluePrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = project.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            StatusPill(
+                text = project.projectType.label,
+                tagType = when (project.projectType) {
+                    CostProjectType.BUDGET -> TagType.SUCCESS_GREEN
+                    CostProjectType.SETTLEMENT -> TagType.URGENT_RED
+                    CostProjectType.WHOLE_PROCESS -> TagType.WARNING_AMBER
+                }
+            )
+        }
+
+        Divider(color = BorderColor.copy(alpha = 0.5f), thickness = 0.8.dp)
+
+        // 1. 对账会议列表
+        if (group.meetings.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "对账与技术交底会议 (${group.meetings.size})：",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AmberWarningText
+                )
+
+                group.meetings.forEach { meeting ->
+                    val mDate = meeting.meetingTime.toLocalDate()
+                    val isToday = mDate == today
+                    val isTomorrow = mDate == today.plusDays(1)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceBackground)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
+                                contentDescription = null,
+                                tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = meeting.title,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (meeting.isCompleted) TextSecondaryDark else TextPrimaryDark,
+                                    textDecoration = if (meeting.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${meeting.meetingTime.format(timeFormatter)} · ${meeting.meetingType.label}",
+                                    fontSize = 10.sp,
+                                    color = TextSecondaryDark
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (meeting.isCompleted) GreenSuccessBg else AmberWarningBg)
+                                .clickable { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (meeting.isCompleted) "已开完" else if (isToday) "今日开会" else if (isTomorrow) "明日开会" else "待召开",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (meeting.isCompleted) GreenSuccessText else AmberWarningText
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. 进行中阶段与交付节点
+        if (group.stageNodes.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "专业阶段交付节点 (${group.stageNodes.size})：",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary
+                )
+
+                group.stageNodes.forEach { node ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceBackground)
+                            .clickable { onNavigateToProject() }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Flag,
+                                contentDescription = null,
+                                tint = BluePrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = node.title,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimaryDark,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${node.timeText} · ${node.detail}",
+                                    fontSize = 10.sp,
+                                    color = TextSecondaryDark,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        StatusPill(text = node.statusText, tagType = node.tagType)
+                    }
+                }
+            }
+        }
     }
 }

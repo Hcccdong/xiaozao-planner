@@ -42,6 +42,7 @@ class ProjectViewModel(
         template: CostEngineeringTemplate,
         subTasks: List<String>,
         customStages: List<StagePreset>? = null,
+        includeDefaultSubTasks: Boolean = true,
         onSuccess: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -53,7 +54,8 @@ class ProjectViewModel(
                 template = template,
                 subTasks = subTasks,
                 startDate = LocalDateTime.now(),
-                customStages = customStages
+                customStages = customStages,
+                includeDefaultSubTasks = includeDefaultSubTasks
             )
             onSuccess(projectId)
         }
@@ -103,6 +105,30 @@ class ProjectViewModel(
     fun deleteStageSubTask(stageId: Long, projectId: Long, taskId: String) {
         viewModelScope.launch {
             projectRepository.deleteStageSubTask(stageId, projectId, taskId)
+        }
+    }
+
+    fun editStageSubTask(stageId: Long, projectId: Long, taskId: String, name: String, estDays: Int) {
+        viewModelScope.launch {
+            projectRepository.editStageSubTask(stageId, projectId, taskId, name, estDays)
+        }
+    }
+
+    fun clearStageSubTasks(stageId: Long, projectId: Long) {
+        viewModelScope.launch {
+            projectRepository.clearStageSubTasks(stageId, projectId)
+        }
+    }
+
+    fun toggleMeetingCompleted(meetingId: Long, completed: Boolean) {
+        viewModelScope.launch {
+            projectRepository.toggleMeetingCompleted(meetingId, completed)
+        }
+    }
+
+    fun deleteMeeting(meetingId: Long) {
+        viewModelScope.launch {
+            projectRepository.deleteMeeting(meetingId)
         }
     }
 
