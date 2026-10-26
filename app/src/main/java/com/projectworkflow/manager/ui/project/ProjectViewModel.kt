@@ -120,6 +120,12 @@ class ProjectViewModel(
         }
     }
 
+    fun updateMeeting(meeting: com.projectworkflow.manager.domain.model.Meeting) {
+        viewModelScope.launch {
+            projectRepository.updateMeeting(meeting)
+        }
+    }
+
     fun toggleMeetingCompleted(meetingId: Long, completed: Boolean) {
         viewModelScope.launch {
             projectRepository.toggleMeetingCompleted(meetingId, completed)

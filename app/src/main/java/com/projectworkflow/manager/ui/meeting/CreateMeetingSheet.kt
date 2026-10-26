@@ -19,8 +19,11 @@ import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.Meeting
 import com.projectworkflow.manager.domain.model.MeetingType
 import com.projectworkflow.manager.domain.model.Project
+import com.projectworkflow.manager.ui.components.MonthlyCalendarPicker
 import com.projectworkflow.manager.ui.theme.*
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,10 +39,14 @@ fun CreateMeetingSheet(
     var agenda by remember { mutableStateOf("") }
     var reminderMinutes by remember { mutableIntStateOf(15) }
 
-    // 默认明天下午 14:00
-    val now = remember { LocalDateTime.now() }
-    var selectedOffsetDays by remember { mutableLongStateOf(1L) }
+    // 日期选择：支持快捷预选 + 完整月历面板切换
+    val today = remember { LocalDate.now() }
+    var selectedDate by remember { mutableStateOf(today.plusDays(1)) }
+    var showCalendar by remember { mutableStateOf(false) }
+
+    // 时刻选择：默认 14:30
     var selectedHour by remember { mutableIntStateOf(14) }
+    var selectedMinute by remember { mutableIntStateOf(30) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -69,19 +76,40 @@ fun CreateMeetingSheet(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // 开会日期快捷选择 (今日 / 明天 / 后天 / 3天后)
-            Text(text = "开会日期:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+            // 开会日期快捷选择 (今天 / 明天 / 后天 / 展开当月日历)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "开会日期:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text(
+                    text = if (showCalendar) "收起日历 ▴" else "展开当月日历 ▾",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary,
+                    modifier = Modifier.clickable { showCalendar = !showCalendar }
+                )
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                val daysOptions = listOf(0L to "今天", 1L to "明天", 2L to "后天", 3L to "3天后")
-                daysOptions.forEach { (offset, label) ->
-                    val isSelected = selectedOffsetDays == offset
+                val quickDates = listOf(
+                    today to "今天",
+                    today.plusDays(1) to "明天",
+                    today.plusDays(2) to "后天"
+                )
+                quickDates.forEach { (date, label) ->
+                    val isSelected = selectedDate == date && !showCalendar
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (isSelected) BlueLight else SurfaceBackground)
                             .border(1.dp, if (isSelected) BluePrimary else BorderColor, RoundedCornerShape(10.dp))
-                            .clickable { selectedOffsetDays = offset }
+                            .clickable {
+                                selectedDate = date
+                                showCalendar = false
+                            }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -93,27 +121,73 @@ fun CreateMeetingSheet(
                         )
                     }
                 }
+
+                // 自选日历按钮
+                val isCustomSelected = showCalendar || (selectedDate != today && selectedDate != today.plusDays(1) && selectedDate != today.plusDays(2))
+                Box(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isCustomSelected) BlueLight else SurfaceBackground)
+                        .border(1.dp, if (isCustomSelected) BluePrimary else BorderColor, RoundedCornerShape(10.dp))
+                        .clickable { showCalendar = !showCalendar }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "📅 选某一天",
+                        fontSize = 12.sp,
+                        fontWeight = if (isCustomSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isCustomSelected) BluePrimary else TextPrimaryDark
+                    )
+                }
             }
 
-            // 开会时刻选择 (上午 10:00 / 下午 14:30 / 下午 16:00)
+            // 展开的当月日历视图
+            if (showCalendar) {
+                MonthlyCalendarPicker(
+                    selectedDate = selectedDate,
+                    onDateSelected = { date ->
+                        selectedDate = date
+                    }
+                )
+            } else {
+                Text(
+                    text = "已选日期：${selectedDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))}（点击「📅 选某一天」可自由点选任意具体日期）",
+                    fontSize = 11.sp,
+                    color = BluePrimary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            // 开会时刻选择 (上午 09:30 / 上午 10:00 / 下午 14:30 / 下午 16:00 / 晚上 19:00)
             Text(text = "开会时刻:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                val hoursOptions = listOf(10 to "10:00", 14 to "14:30", 16 to "16:00", 19 to "19:00")
-                hoursOptions.forEach { (h, label) ->
-                    val isSelected = selectedHour == h
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                val timesOptions = listOf(
+                    (9 to 30) to "09:30",
+                    (10 to 0) to "10:00",
+                    (14 to 30) to "14:30",
+                    (16 to 0) to "16:00",
+                    (19 to 0) to "19:00"
+                )
+                timesOptions.forEach { ((h, m), label) ->
+                    val isSelected = selectedHour == h && selectedMinute == m
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (isSelected) BlueLight else SurfaceBackground)
                             .border(1.dp, if (isSelected) BluePrimary else BorderColor, RoundedCornerShape(10.dp))
-                            .clickable { selectedHour = h }
+                            .clickable {
+                                selectedHour = h
+                                selectedMinute = m
+                            }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) BluePrimary else TextPrimaryDark
                         )
@@ -167,12 +241,7 @@ fun CreateMeetingSheet(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        val minutePart = if (selectedHour == 14) 30 else 0
-                        val meetingTime = now.plusDays(selectedOffsetDays)
-                            .withHour(selectedHour)
-                            .withMinute(minutePart)
-                            .withSecond(0)
-
+                        val meetingTime = selectedDate.atTime(selectedHour, selectedMinute, 0)
                         val meeting = Meeting(
                             projectId = defaultProjectId,
                             stageId = defaultStageId,

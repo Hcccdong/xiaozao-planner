@@ -41,7 +41,8 @@ interface ProjectRepository {
     // 商务结算与成果归档追踪 (开票、到账、回访、成果确认单)
     suspend fun updateProjectBusinessClosure(projectId: Long, status: BusinessClosureStatus)
 
-    // 关联会议完成状态与删除
+    // 关联会议完成状态与修改/删除
+    suspend fun updateMeeting(meeting: Meeting)
     suspend fun toggleMeetingCompleted(meetingId: Long, completed: Boolean)
     suspend fun deleteMeeting(meetingId: Long)
 

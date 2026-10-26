@@ -14,6 +14,7 @@ import com.projectworkflow.manager.data.template.CostEngineeringTemplate
 import com.projectworkflow.manager.data.template.StagePreset
 import com.projectworkflow.manager.domain.model.BuildingSubTask
 import com.projectworkflow.manager.domain.model.BusinessClosureStatus
+import com.projectworkflow.manager.domain.model.Meeting
 import com.projectworkflow.manager.domain.model.Project
 import com.projectworkflow.manager.domain.model.ProjectStatus
 import com.projectworkflow.manager.domain.model.Stage
@@ -322,6 +323,10 @@ class ProjectRepositoryImpl(
         val stage = stageDao.getStageById(stageId) ?: return
         stageDao.updateStageProgressAndSubTasks(stageId, stage.progress, stage.status, "")
         syncProjectAverageProgress(projectId)
+    }
+
+    override suspend fun updateMeeting(meeting: Meeting) {
+        meetingDao.updateMeeting(meeting.toEntity())
     }
 
     override suspend fun toggleMeetingCompleted(meetingId: Long, completed: Boolean) {

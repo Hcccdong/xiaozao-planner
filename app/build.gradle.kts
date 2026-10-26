@@ -12,8 +12,8 @@ android {
         applicationId = "com.projectworkflow.manager"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.5.6"
+        versionCode = 13
+        versionName = "1.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

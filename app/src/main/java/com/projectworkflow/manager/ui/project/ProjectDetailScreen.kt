@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -33,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.domain.model.BuildingSubTask
 import com.projectworkflow.manager.domain.model.Meeting
+import com.projectworkflow.manager.domain.model.MeetingType
 import com.projectworkflow.manager.domain.model.Stage
 import com.projectworkflow.manager.domain.model.TagType
 import com.projectworkflow.manager.ui.components.ModernProgressBar
+import com.projectworkflow.manager.ui.components.MonthlyCalendarPicker
 import com.projectworkflow.manager.ui.components.StatusPill
 import com.projectworkflow.manager.ui.theme.*
 import java.time.LocalDate
@@ -53,6 +57,7 @@ fun ProjectDetailScreen(
     val detailState by viewModel.getProjectDetail(projectId).collectAsState(initial = ProjectDetailUiState(isLoading = true))
     val project = detailState.project
     var showEditProjectDaysDialog by remember { mutableStateOf(false) }
+    var editingMeeting by remember { mutableStateOf<Meeting?>(null) }
 
     Scaffold(
         topBar = {
@@ -269,18 +274,11 @@ fun ProjectDetailScreen(
                         onToggleMeetingCompleted = { mId, completed ->
                             viewModel.toggleMeetingCompleted(mId, completed)
                         },
+                        onEditMeeting = { meetingToEdit ->
+                            editingMeeting = meetingToEdit
+                        },
                         onDeleteMeeting = { mId ->
                             viewModel.deleteMeeting(mId)
-                        }
-                    )
-                }
-
-                // 2.6 【商务结算与成果归档追踪】(是否开票、是否收费到账、是否出具回访单、是否收到成果确认单)
-                item {
-                    ProjectBusinessClosureCard(
-                        businessClosure = project.businessClosure,
-                        onUpdateStatus = { newStatus ->
-                            viewModel.updateBusinessClosure(projectId, newStatus)
                         }
                     )
                 }
@@ -347,6 +345,19 @@ fun ProjectDetailScreen(
                         },
                         onToggleMeetingCompleted = { meetingId, completed ->
                             viewModel.toggleMeetingCompleted(meetingId, completed)
+                        },
+                        onEditMeeting = { meetingToEdit ->
+                            editingMeeting = meetingToEdit
+                        }
+                    )
+                }
+
+                // 4. 【商务结算与成果归档追踪】(全项目收尾闭环区：移至最底部，默认折叠，不占用上方主视觉)
+                item {
+                    ProjectBusinessClosureCard(
+                        businessClosure = project.businessClosure,
+                        onUpdateStatus = { newStatus ->
+                            viewModel.updateBusinessClosure(projectId, newStatus)
                         }
                     )
                 }
@@ -362,6 +373,18 @@ fun ProjectDetailScreen(
                     onConfirm = { totalPlanDays, elapsedDays ->
                         viewModel.updateProjectDays(projectId, totalPlanDays, elapsedDays)
                         showEditProjectDaysDialog = false
+                    }
+                )
+            }
+
+            // 修改已有会议与开会时间弹窗 (解决“模板决定好了不能修改/点进去就默认完成”痛点)
+            editingMeeting?.let { mToEdit ->
+                EditMeetingDialog(
+                    meeting = mToEdit,
+                    onDismiss = { editingMeeting = null },
+                    onConfirm = { updatedMeeting ->
+                        viewModel.updateMeeting(updatedMeeting)
+                        editingMeeting = null
                     }
                 )
             }
@@ -384,7 +407,8 @@ private fun CostStageTimelineItem(
     onDeleteSubTask: (taskId: String) -> Unit,
     onClearSubTasks: () -> Unit,
     onAddMeeting: () -> Unit,
-    onToggleMeetingCompleted: (Long, Boolean) -> Unit
+    onToggleMeetingCompleted: (Long, Boolean) -> Unit,
+    onEditMeeting: (Meeting) -> Unit
 ) {
     var isSubTasksExpanded by remember { mutableStateOf(stage.progress < 100) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -612,6 +636,50 @@ private fun CostStageTimelineItem(
                         .padding(top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val subTasksSumDays = stage.subTasks.sumOf { it.estimatedDays }
+                    val isDaysOver = stage.subTasks.isNotEmpty() && subTasksSumDays > stage.planDays
+
+                    // 若单体预估天数之和超过阶段工期：提供友好说明与一键纠偏对齐
+                    if (isDaysOver) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFFFBEB))
+                                .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "⚠️ 单体工期总和 (${subTasksSumDays}天) > 阶段计划 (${stage.planDays}天)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AmberWarningText
+                                )
+                                Text(
+                                    text = "单人串行建议对齐放大；团队并行协同可保持现状",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF92400E)
+                                )
+                            }
+                            Text(
+                                text = "调为${subTasksSumDays}天",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BluePrimary,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(BlueLight)
+                                    .clickable { onUpdateStageDays(subTasksSumDays, stage.elapsedDays) }
+                                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                            )
+                        }
+                    }
+
                     if (stage.subTasks.isEmpty()) {
                         Text(
                             text = "当前按整体推进，直接在下方调整阶段总进度；若需要细分子项，可点击右上角「+ 添加单体/分部」随时细化拆解",
@@ -728,14 +796,15 @@ private fun CostStageTimelineItem(
                 }
             }
 
-            // 配套会议 (支持直接点击切换完成状态，若阶段100%已自动达成)
+            // 配套会议 (点击文字修改时间/议程，点击图标切换完成，绝不误触)
             if (stage.meetings.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(text = "阶段配套对账会议 (点击状态可切换已开完):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text(text = "阶段配套对账会议 (点击修改时间/议程，点击图标切换完成):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
                 stage.meetings.forEach { meeting ->
                     MeetingSmallBadge(
                         meeting = meeting,
-                        onToggleCompleted = { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) }
+                        onToggleCompleted = { onToggleMeetingCompleted(meeting.id, !meeting.isCompleted) },
+                        onEdit = { onEditMeeting(meeting) }
                     )
                 }
             }
@@ -1268,7 +1337,8 @@ private fun EditProjectDaysDialog(
 @Composable
 private fun MeetingSmallBadge(
     meeting: Meeting,
-    onToggleCompleted: () -> Unit
+    onToggleCompleted: () -> Unit,
+    onEdit: () -> Unit
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
     Row(
@@ -1277,7 +1347,7 @@ private fun MeetingSmallBadge(
             .padding(top = 4.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceBackground)
-            .clickable { onToggleCompleted() }
+            .clickable { onEdit() }
             .padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1287,13 +1357,15 @@ private fun MeetingSmallBadge(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp)
+                .padding(end = 6.dp)
         ) {
             Icon(
                 imageVector = if (meeting.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.Event,
                 contentDescription = null,
                 tint = if (meeting.isCompleted) GreenSuccessText else AmberWarningText,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onToggleCompleted() }
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1306,16 +1378,26 @@ private fun MeetingSmallBadge(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
-                    text = meeting.meetingTime.format(timeFormatter),
+                    text = "${meeting.meetingTime.format(timeFormatter)} · 点击改时间/议程 ✎",
                     fontSize = 10.sp,
-                    color = TextSecondaryDark
+                    color = if (meeting.isCompleted) TextSecondaryDark else BluePrimary
                 )
             }
         }
-        StatusPill(
-            text = if (meeting.isCompleted) "已开完" else "待召开",
-            tagType = if (meeting.isCompleted) TagType.NEUTRAL_GRAY else TagType.WARNING_AMBER
-        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (meeting.isCompleted) GreenSuccessBg else AmberWarningBg)
+                .clickable { onToggleCompleted() }
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
+            Text(
+                text = if (meeting.isCompleted) "已开完" else "待召开",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (meeting.isCompleted) GreenSuccessText else AmberWarningText
+            )
+        }
     }
 }
 
@@ -1413,6 +1495,7 @@ private fun ProjectMeetingsCard(
     stages: List<Stage>,
     onAddMeeting: () -> Unit,
     onToggleMeetingCompleted: (meetingId: Long, completed: Boolean) -> Unit,
+    onEditMeeting: (Meeting) -> Unit,
     onDeleteMeeting: (meetingId: Long) -> Unit
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
@@ -1504,6 +1587,7 @@ private fun ProjectMeetingsCard(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(SurfaceBackground)
                                 .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
+                                .clickable { onEditMeeting(meeting) }
                                 .padding(10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -1573,6 +1657,18 @@ private fun ProjectMeetingsCard(
                                 }
 
                                 IconButton(
+                                    onClick = { onEditMeeting(meeting) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "修改会议时间与议程",
+                                        tint = BluePrimary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+
+                                IconButton(
                                     onClick = { onDeleteMeeting(meeting.id) },
                                     modifier = Modifier.size(24.dp)
                                 ) {
@@ -1601,7 +1697,7 @@ private fun ProjectBusinessClosureCard(
     onUpdateStatus: (com.projectworkflow.manager.domain.model.BusinessClosureStatus) -> Unit
 ) {
     var editingItemKey by remember { mutableStateOf<String?>(null) }
-    var isExpanded by remember { mutableStateOf(true) }
+    var isExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -1905,6 +2001,211 @@ private fun EditBusinessClosureDialog(
         confirmButton = {
             Button(onClick = { onConfirm(checked, noteText.trim()) }) {
                 Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 修改已有会议与开会时间弹窗 (集成当月交互式日历与时刻选择)
+ */
+@Composable
+private fun EditMeetingDialog(
+    meeting: Meeting,
+    onDismiss: () -> Unit,
+    onConfirm: (Meeting) -> Unit
+) {
+    var title by remember { mutableStateOf(meeting.title) }
+    var locationOrLink by remember { mutableStateOf(meeting.locationOrLink ?: "") }
+    var agenda by remember { mutableStateOf(meeting.agenda ?: "") }
+
+    val today = remember { LocalDate.now() }
+    var selectedDate by remember { mutableStateOf(meeting.meetingTime.toLocalDate()) }
+    var showCalendar by remember { mutableStateOf(false) }
+
+    var selectedHour by remember { mutableIntStateOf(meeting.meetingTime.hour) }
+    var selectedMinute by remember { mutableIntStateOf(meeting.meetingTime.minute) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(text = "修改会议与开会时间", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "可自由选择具体开会日期与调整时间", fontSize = 11.sp, color = TextSecondaryDark)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("会议主题") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 开会日期选择与月历展示
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "开会日期:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                    Text(
+                        text = if (showCalendar) "收起日历 ▴" else "📅 展开当月日历 ▾",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary,
+                        modifier = Modifier.clickable { showCalendar = !showCalendar }
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    val quickDates = listOf(
+                        today to "今天",
+                        today.plusDays(1) to "明天",
+                        today.plusDays(2) to "后天"
+                    )
+                    quickDates.forEach { (date, label) ->
+                        val isSelected = selectedDate == date && !showCalendar
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) BlueLight else SurfaceBackground)
+                                .border(1.dp, if (isSelected) BluePrimary else BorderColor, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    selectedDate = date
+                                    showCalendar = false
+                                }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) BluePrimary else TextPrimaryDark
+                            )
+                        }
+                    }
+
+                    // 自选某一天日历切换按钮
+                    val isCustom = showCalendar || (selectedDate != today && selectedDate != today.plusDays(1) && selectedDate != today.plusDays(2))
+                    Box(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isCustom) BlueLight else SurfaceBackground)
+                            .border(1.dp, if (isCustom) BluePrimary else BorderColor, RoundedCornerShape(8.dp))
+                            .clickable { showCalendar = !showCalendar }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "📅 选某一天",
+                            fontSize = 11.sp,
+                            fontWeight = if (isCustom) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCustom) BluePrimary else TextPrimaryDark
+                        )
+                    }
+                }
+
+                // 展开的日历视图
+                if (showCalendar) {
+                    MonthlyCalendarPicker(
+                        selectedDate = selectedDate,
+                        onDateSelected = { date ->
+                            selectedDate = date
+                        }
+                    )
+                } else {
+                    Text(
+                        text = "已选日期：${selectedDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))}（点击「📅 选某一天」可在月历自由点选）",
+                        fontSize = 10.sp,
+                        color = BluePrimary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // 开会时刻
+                Text(text = "开会时刻:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                    val timesOptions = listOf(
+                        (9 to 30) to "09:30",
+                        (10 to 0) to "10:00",
+                        (14 to 30) to "14:30",
+                        (16 to 0) to "16:00",
+                        (19 to 0) to "19:00"
+                    )
+                    timesOptions.forEach { ((h, m), label) ->
+                        val isSelected = selectedHour == h && selectedMinute == m
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) BlueLight else SurfaceBackground)
+                                .border(1.dp, if (isSelected) BluePrimary else BorderColor, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    selectedHour = h
+                                    selectedMinute = m
+                                }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) BluePrimary else TextPrimaryDark
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = agenda,
+                    onValueChange = { agenda = it },
+                    label = { Text("议程内容 / 对账说明 (选填)") },
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = locationOrLink,
+                    onValueChange = { locationOrLink = it },
+                    label = { Text("地点 / 腾讯会议链接 (选填)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val newMeetingTime = selectedDate.atTime(selectedHour, selectedMinute, 0)
+                    val updated = meeting.copy(
+                        title = title.trim(),
+                        meetingTime = newMeetingTime,
+                        agenda = agenda.trim().ifBlank { null },
+                        locationOrLink = locationOrLink.trim().ifBlank { null }
+                    )
+                    onConfirm(updated)
+                },
+                enabled = title.isNotBlank()
+            ) {
+                Text("保存修改")
             }
         },
         dismissButton = {
