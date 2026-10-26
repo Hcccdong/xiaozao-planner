@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectworkflow.manager.data.template.CostEngineeringTemplate
@@ -335,22 +337,47 @@ private fun EditableStageItem(
                 },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                placeholder = { Text("阶段名称", fontSize = 12.sp, color = TextSecondaryDark) },
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark),
+                shape = RoundedCornerShape(10.dp)
             )
 
-            // 阶段天数输入
-            OutlinedTextField(
-                value = daysText,
-                onValueChange = {
-                    daysText = it
-                    it.toIntOrNull()?.let { d -> onUpdateDays(d) }
-                },
-                trailingIcon = { Text("天", fontSize = 11.sp, color = TextSecondaryDark) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.width(72.dp),
-                singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
-            )
+            // 阶段天数输入胶囊 (彻底解决字号缩小、无内部冗余边距挤压、居中清晰大字)
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White)
+                    .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
+                    .height(52.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                BasicTextField(
+                    value = daysText,
+                    onValueChange = { input ->
+                        val digits = input.filter { it.isDigit() }.take(4) // 限制最多4位数字
+                        daysText = digits
+                        digits.toIntOrNull()?.let { d -> onUpdateDays(d) }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TextPrimaryDark,
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = Modifier.widthIn(min = 36.dp, max = 56.dp)
+                )
+                Text(
+                    text = "天",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BluePrimary,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
+            }
 
             // 删除按钮
             if (canDelete) {

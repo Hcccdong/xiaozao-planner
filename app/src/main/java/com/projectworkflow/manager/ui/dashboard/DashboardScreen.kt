@@ -8,15 +8,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,67 +84,100 @@ fun DashboardScreen(
                     )
                 }
 
-                // 操作按钮组：备份 + 检查更新 + 新项目
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    modifier = Modifier.padding(start = 4.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onOpenBackup,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryDark),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 6.dp)
+                // 顶部系统设置按钮（精简收拢备份与更新，界面干净清爽）
+                var showSettingsMenu by remember { mutableStateOf(false) }
+
+                Box {
+                    IconButton(
+                        onClick = { showSettingsMenu = true },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Security,
-                            contentDescription = "数据备份",
-                            tint = TextSecondaryDark,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = "备份",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimaryDark
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "系统设置",
+                            tint = TextPrimaryDark,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = onCheckUpdate,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
-                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 6.dp)
+                    DropdownMenu(
+                        expanded = showSettingsMenu,
+                        onDismissRequest = { showSettingsMenu = false },
+                        modifier = Modifier
+                            .background(Color.White)
+                            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Upgrade,
-                            contentDescription = "检查更新",
-                            tint = BluePrimary,
-                            modifier = Modifier.size(14.dp)
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "新建工程项目",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimaryDark
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Add,
+                                    contentDescription = null,
+                                    tint = BluePrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                showSettingsMenu = false
+                                onOpenCreateProject()
+                            }
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = "更新",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BluePrimary
-                        )
-                    }
 
-                    Button(
-                        onClick = onOpenCreateProject,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "+ 新项目",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "数据备份与还原",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimaryDark
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Security,
+                                    contentDescription = null,
+                                    tint = Color(0xFF6366F1),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                showSettingsMenu = false
+                                onOpenBackup()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "检查软件更新",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimaryDark
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Upgrade,
+                                    contentDescription = null,
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                showSettingsMenu = false
+                                onCheckUpdate()
+                            }
                         )
                     }
                 }

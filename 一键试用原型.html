@@ -66,22 +66,25 @@
             <p class="text-xs text-slate-500 mt-0.5">项目进度全景 · 关键节点日程推进</p>
           </div>
           
-          <!-- 顶部操作组：备份 + 更新 + 新项目 -->
-          <div class="flex items-center gap-1.5">
-            <button onclick="openModal('backup-modal')" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all">
-              <svg class="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>备份</span>
+          <!-- 顶部系统设置按钮与下拉菜单（精简聚合） -->
+          <div class="relative">
+            <button onclick="toggleSettingsMenu()" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 text-slate-700 flex items-center justify-center shadow-sm transition-all">
+              <svg class="w-4 h-4 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
-            <button onclick="openModal('update-modal')" class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 font-bold text-xs flex items-center gap-1 transition-all">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-              <span>更新</span>
-            </button>
-            <button onclick="openCreateProjectModal()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-all">
-              <svg class="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>新项目</span>
-            </button>
+            <div id="settings-dropdown" class="hidden absolute right-0 mt-1.5 w-44 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5">
+              <button onclick="toggleSettingsMenu(); openCreateProjectModal();" class="w-full px-3 py-2 text-left text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                <span>新建工程项目</span>
+              </button>
+              <button onclick="toggleSettingsMenu(); openModal('backup-modal');" class="w-full px-3 py-2 text-left text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>数据备份与还原</span>
+              </button>
+              <button onclick="toggleSettingsMenu(); openModal('update-modal');" class="w-full px-3 py-2 text-left text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100">
+                <svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span>检查软件更新</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -605,7 +608,7 @@
           </div>
           <div>
             <h3 class="text-sm font-black text-slate-900">发现新版本</h3>
-            <span class="text-xs font-bold text-blue-600">v1.5.1 · 最新发布</span>
+            <span class="text-xs font-bold text-blue-600">v1.5.2 · 最新发布</span>
           </div>
         </div>
         <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">16.8 MB</span>
@@ -958,6 +961,11 @@
       };
 
       openProjectDetail(newKey);
+    }
+
+    function toggleSettingsMenu() {
+      const el = document.getElementById('settings-dropdown');
+      if (el) el.classList.toggle('hidden');
     }
   </script>
 </body>
