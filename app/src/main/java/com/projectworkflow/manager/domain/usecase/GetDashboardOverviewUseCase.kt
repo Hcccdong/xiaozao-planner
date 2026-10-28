@@ -25,13 +25,13 @@ class GetDashboardOverviewUseCase(
 ) {
 
     operator fun invoke(): Flow<DashboardOverview> {
-        val now = LocalDateTime.now()
-        val today = LocalDate.now()
-
         return combine(
             projectRepository.getAllProjectsFlow(),
             meetingRepository.getAllMeetingsFlow()
         ) { projects, meetings ->
+            val now = LocalDateTime.now()
+            val today = LocalDate.now()
+
             // 1. 计算三卡片指标
             val inProgressProjects = projects.filter { it.status == ProjectStatus.IN_PROGRESS }
             val nearFinishProjects = projects.filter { it.progress in 80..99 }
@@ -43,10 +43,10 @@ class GetDashboardOverviewUseCase(
             // 统计未来7天内的节点与会议
             val sevenDaysLater = now.plusDays(7)
             val upcomingMeetings7Days = meetings.filter {
-                !it.isCompleted && it.meetingTime.isAfter(now) && it.meetingTime.isBefore(sevenDaysLater)
+                !it.isCompleted && (it.meetingTime.toLocalDate() == today || it.meetingTime.isAfter(now)) && it.meetingTime.isBefore(sevenDaysLater)
             }
             val upcomingStages7Days = activeStages.filter {
-                it.endDate.isAfter(now) && it.endDate.isBefore(sevenDaysLater)
+                (it.endDate.toLocalDate() == today || it.endDate.isAfter(now)) && it.endDate.isBefore(sevenDaysLater)
             }
             val totalUpcomingNodes = upcomingMeetings7Days.size + upcomingStages7Days.size
 
@@ -59,7 +59,7 @@ class GetDashboardOverviewUseCase(
                 withinDays = 7
             )
 
-            // 2. 聚类计算「今天重点」（按紧急程度：逾期 -> 明日会议 -> 近期交付）
+            // 2. 聚类计算「今天重点」（按紧急程度：逾期 -> 今日/明日会议 -> 近期交付）
             val focusList = mutableListOf<TodayFocusItem>()
 
             // A. 逾期阶段 (红色高亮)
@@ -78,10 +78,10 @@ class GetDashboardOverviewUseCase(
                     )
                 }
 
-            // B. 明天或今天的会议 (黄色高亮)
+            // B. 明天或今天的会议 (今日会议红色高亮，明天会议黄色高亮)
             val tomorrow = today.plusDays(1)
             val timeFormatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
-            meetings.filter { !it.isCompleted && it.meetingTime.isAfter(now) }
+            meetings.filter { !it.isCompleted && (it.meetingTime.toLocalDate() == today || it.meetingTime.isAfter(now)) }
                 .sortedBy { it.meetingTime }
                 .forEach { meeting ->
                     val meetingDate = meeting.meetingTime.toLocalDate()

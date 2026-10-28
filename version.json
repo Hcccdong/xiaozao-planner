@@ -1,8 +1,8 @@
 {
-  "versionCode": 13,
-  "versionName": "1.5.7",
-  "updateLog": "1. 交互式当月日历选择器上线：排定与修改会议支持一键展开完整当月日历面板，任意日期自由点选，开会时刻精准设定\n2. 阶段配套会议支持自由修改与防误触：修复点击会议整行直接打勾误完成的问题，点击整行支持修改开会时间、主题与议程，点击图标才切换完成\n3. 商务结算追踪归档区布局优化：将商务结算与成果归档追踪移至全流程最底部，默认折叠收拢，主流程视觉更聚焦\n4. 单体拆解总工期智能预警与一键纠偏：单体工期总和大于阶段计划时友好提示并行推进状态，并支持一键调整对齐阶段计划天数",
-  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.7/xiaozao-planner_v1.5.7.apk",
+  "versionCode": 14,
+  "versionName": "1.5.8",
+  "updateLog": "1. 修复首页今日重点标签错误：彻底修复今日会议误显示为'明天会议'的逻辑缺陷，实时精准标注'今日会议'（高亮红）与'明天会议'（预警黄）\n2. 彻底优化新增会议排会弹窗：去除默认半屏折叠限制，全面适配软键盘升起避让，滚动空间充足，确保表单与'确认排会'按钮完整展示且不被截断\n3. 节点模块状态增强：对账会议状态细化支持'今日对账'、'明日开会'及'已逾期'警示",
+  "apkUrl": "https://gh-proxy.com/https://github.com/Hcccdong/xiaozao-planner/releases/download/v1.5.8/xiaozao-planner_v1.5.8.apk",
   "apkSizeMb": "16.8 MB",
   "forceUpdate": false
 }

@@ -48,17 +48,23 @@ fun CreateMeetingSheet(
     var selectedHour by remember { mutableIntStateOf(14) }
     var selectedMinute by remember { mutableIntStateOf(30) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        containerColor = CardBackground
+        containerColor = CardBackground,
+        windowInsets = WindowInsets.ime
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.92f)
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 36.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
@@ -271,6 +277,8 @@ fun CreateMeetingSheet(
                     color = Color.White
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

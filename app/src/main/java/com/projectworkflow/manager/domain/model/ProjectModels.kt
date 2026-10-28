@@ -182,21 +182,19 @@ sealed class TodayFocusItem {
         override val id: String,
         override val title: String,
         val meetingTimeText: String,
-        override val detail: String
-    ) : TodayFocusItem() {
-        override val tag: String = "明天会议"
-        override val tagType: TagType = TagType.WARNING_AMBER
-    }
+        override val detail: String,
+        override val tag: String = meetingTimeText,
+        override val tagType: TagType = if (meetingTimeText.contains("今日") || meetingTimeText.contains("今天") || meetingTimeText.contains("逾期")) TagType.URGENT_RED else TagType.WARNING_AMBER
+    ) : TodayFocusItem()
 
     data class UpcomingDelivery(
         override val id: String,
         override val title: String,
         val dueText: String,
-        override val detail: String
-    ) : TodayFocusItem() {
-        override val tag: String = dueText
-        override val tagType: TagType = TagType.SUCCESS_GREEN
-    }
+        override val detail: String,
+        override val tag: String = dueText,
+        override val tagType: TagType = if (dueText.contains("今日") || dueText.contains("今天")) TagType.URGENT_RED else TagType.SUCCESS_GREEN
+    ) : TodayFocusItem()
 }
 
 enum class TagType {

@@ -59,6 +59,7 @@ class DashboardViewModel(
 
             val statusText = when {
                 m.isCompleted -> "已开完"
+                mDate < today -> "已逾期"
                 isToday -> "今日对账"
                 isTomorrow -> "明日开会"
                 else -> m.meetingType.label
@@ -66,6 +67,7 @@ class DashboardViewModel(
 
             val tagType = when {
                 m.isCompleted -> TagType.SUCCESS_GREEN
+                mDate < today -> TagType.URGENT_RED
                 isToday -> TagType.URGENT_RED
                 isTomorrow -> TagType.WARNING_AMBER
                 else -> TagType.NEUTRAL_GRAY
